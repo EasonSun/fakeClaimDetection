@@ -4,18 +4,24 @@ import re
 
 
 def extractSnippets(article, articleLabel):
-	snippets = []
-	snippetLabels = []
-	splittedArticle = re.split(r'[^a-zA-Z|^ ]', article)
-	q = len(splittedArticle) - 3
-	for i in range(q):
-		temp = splittedArticle[i:i+3]
-		snippet = "";
-		for j in range(3):
-			snippet = snippet + temp[j]
-		snippets.append(snippet)
-		snippetLabels.append(articleLabel)
-	return snippets, snippetLabels
+    snippets = []
+    snippetLabels = []
+    #splittedArticle = re.split(r'[^a-zA-Z|^ ]', article)
+    splittedArticle = re.split(r'[.|!|?]', article)
+    for i in range(len(splittedArticle)):
+        splittedArticle[i] = re.sub("[^a-zA-Z|^ ]+","",splittedArticle[i])
+    while '' in splittedArticle:
+        splittedArticle.remove('')
+    q = len(splittedArticle) - 3
+    for i in range(q):
+        temp = splittedArticle[i:i+3]
+        snippet = "";
+        for j in range(3):
+            snippet = snippet + temp[j]
+        snippets.append(snippet)
+        snippetLabels.append(articleLabel)
+    return snippets, snippetLabels
+    
 
 def extractVocab(claims, snippets, vectorizer):
 	result = {}
@@ -73,11 +79,52 @@ def extractRelatedSnippet(claims, articles, articleLabels):
 		print(relatedSnippet)
 		print(relatedSnippetLabels)
 		break
-	return relatedSnippet, relatedSnippetLabels
+	return relatedSnippet, relatedSnippetLabels 
+ 
+def extractOverlapSnippet(claims, articles, articleLabels):
+	relatedSnippetX = []
+	relatedSnippet_y = []
 
-def evaluateStance(claims, articles, articleLabels, isFeatureGenerated=False):
+	from sklearn.feature_extraction.text import CountVectorizer
+	# empty string can be taken as all 0 vectors
+	# using both uni- and bi-grams
+	vectorizer = CountVectorizer(analyzer = "word",   \
+	                             tokenizer = None,    \
+	                             preprocessor = None, \
+	                             stop_words = 'english', \
+	                             ngram_range=(1, 2))
+	                             #max_features = 5000) 
+
+	from sklearn.metrics.pairwise import cosine_similarity
+
+	for claim, article, articleLabel in zip(claims, articles, articleLabels):
+		snippets, snippetLabels = extractSnippets(article, articleLabels)
+		print (len(snippets))
+		# find vocab for this pair so as to do vector similarity
+		vocab = extractVocab([claim], snippets, vectorizer)
+		# print (vocab)
+		vectorizer.vocabulary = vocab
+		claimX = vectorizer.fit_transform([claim])
+		claimX = claimX.toarray()
+		# print(claimX.shape)
+		snippetsX = vectorizer.fit_transform(snippets)
+		snippetsX = snippetsX.toarray()
+		# print(snippetsX.shape)
+		# print (cosine_similarity(claimX, snippetsX))
+		overlapIdx = np.where(cosine_similarity(snippetsX, claimX) > .15)[0]
+		print (overlapIdx)
+		relatedSnippet_y.extend([articleLabel for i in range(len(overlapIdx))])
+		snippets = np.array([[snippet] for snippet in snippets])
+		#print (snippets.shape)
+		print (snippets[overlapIdx])
+		relatedSnippetX.extend(snippets[overlapIdx].tolist())
+		break
+	return relatedSnippetX, relatedSnippet_y
+
+def evaluateStance(claims, articles, articleLabels, isFeatureGenerated = False):
 	relatedSnippetX = np.array(0)
 	relatedSnippet_y = np.array(0)
+	claims =re.sub("[^a-zA-Z|^ ]+","",claims)
 	if not isFeatureGenerated:
 		relatedSnippet, relatedSnippetLabels = extractRelatedSnippet(claims, articles, articleLabels)
 		from sklearn.feature_extraction.text import CountVectorizer
@@ -98,3 +145,4 @@ def evaluateStance(claims, articles, articleLabels, isFeatureGenerated=False):
 	else:
 		relatedSnippetX = np.load('relatedSnippetX.npy')
 		relatedSnippet_y = np.load('relatedSnippet_y.npy')
+
