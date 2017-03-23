@@ -1,5 +1,5 @@
 #!/bin/bash
-dataPath='../../Data/SnopesTest'
+dataPath='../../Data/Snopes'
 lgFeaturesPath='../../Data/linguisticFeatures/'
 
 nfold='10'
