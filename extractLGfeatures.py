@@ -38,7 +38,8 @@ def helper(claims, allFeatures):
 	lgClaims = []
 	for claim in claims:
 		lgClaim = []
-		words = re.findall("[a-zA-Z]+", claim)
+		words = re.findall(r"[\w']+|[!?\"]", claim)	# keep ! ? "
+		# words = re.findall("[a-zA-Z]+", claim)
 		for word in words:
 			if word in allFeatures:
 				lgClaim.append(word)

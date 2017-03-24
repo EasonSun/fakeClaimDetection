@@ -74,30 +74,28 @@ for item in data:	# each item is a dict
 		elif item['Credibility'] in ['false', 'mostly false']: 
 			articleLabels.append(1) # against
 
-
-
-
-# lingustic feature
-'''
 try:
 	assert(len(claims) == len(labels))
 except AssertionError as e:
 	print ('length of claims: ' + str(len(claims)) + ' but length of labels: ' + str(len(labels)))
 
+
+# lingustic feature
 if not (os.path.isfile('lgX.npy')):
 	lgClaims = extractLGfeatures(claims, lgFeaturesPath)
 	evaluateLG(lgClaims, labels)
 else:
 	evaluateLG(None, labels, isFeatureGenerated = True)
-'''
 
+
+'''
 # stance feature
 if not (os.path.isfile('relatedSnippetX.npy') 
 		and os.path.isfile('relatedSnippet_y.npy')):
 	evaluateStance(claims, articles, articleLabels)
 else:
 	evaluateStance(None, None, None, isFeatureGenerated = True)
-
+'''
 
 
 '''
