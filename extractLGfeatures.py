@@ -3,16 +3,19 @@ import sys
 
 def extractLGfeatures(claims, lgFeaturesPath):
 	allFeaturePath = os.path.join(lgFeaturesPath, 'allFeatures.txt')
-	if not (os.path.isfile(allFeaturePath)):	#may need to check the line count, which is 1067
+	if not (os.path.isfile(allFeaturePath)):
+		print ("Creating file allFeatures.txt to group all linguistic features")
 		afFile = open(allFeaturePath, 'w')
-		for file in os.listdir(lgFeaturesPath):
-			#print file
-			if file != 'allFeatures.txt' and file.endswith('.txt'):
-				curFile = open(os.path.join(lgFeaturesPath, file), 'r')
+		for filePath in os.listdir(lgFeaturesPath):
+			#print filePath
+			if filePath != 'allFeatures.txt' and filePath.endswith('.txt'):
+				print (filePath)
+				curFile = open(os.path.join(lgFeaturesPath, filePath), 'r', encoding='utf-8', errors='ignore')
 				writeAFFile(afFile, curFile)
 				curFile.close()
 		afFile.close()
 	
+
 	afFile = open(allFeaturePath, 'r')
 	allFeatures = set(afFile.read().split())
 	afFile.close()
@@ -33,8 +36,8 @@ def writeAFFile(afFile, curFile):
 	afFile.write('\n')
 
 # Many synonms (noun/verb) get messed up
-import re
 def helper(claims, allFeatures):
+	import re
 	lgClaims = []
 	for claim in claims:
 		lgClaim = []

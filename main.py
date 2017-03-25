@@ -26,7 +26,7 @@ import json
 import numpy
 from extractLGfeatures import extractLGfeatures
 from evaluateLG import evaluateLG
-from evaluateStance import evaluateStance
+from evaluateStance import evaluateStance, evaluateStanceLg
 
 dataPath = sys.argv[1]
 lgFeaturesPath = sys.argv[2]
@@ -80,16 +80,17 @@ except AssertionError as e:
 	print ('length of claims: ' + str(len(claims)) + ' but length of labels: ' + str(len(labels)))
 
 
-# lingustic feature
+# lingustic classification
+'''
 if not (os.path.isfile('lgX.npy')):
 	lgClaims = extractLGfeatures(claims, lgFeaturesPath)
 	evaluateLG(lgClaims, labels)
 else:
 	evaluateLG(None, labels, isFeatureGenerated = True)
-
+'''
 
 '''
-# stance feature
+# stance classification
 if not (os.path.isfile('relatedSnippetX.npy') 
 		and os.path.isfile('relatedSnippet_y.npy')):
 	evaluateStance(claims, articles, articleLabels)
@@ -97,6 +98,12 @@ else:
 	evaluateStance(None, None, None, isFeatureGenerated = True)
 '''
 
+# stance classification with linguistic features
+if not (os.path.isfile('relatedSnippetLgX.npy') 
+		and os.path.isfile('relatedSnippetLg_y.npy')):
+	evaluateStanceLg(claims, articles, articleLabels, lgFeaturesPath)
+else:
+	evaluateStanceLg(None, None, None, lgFeaturesPath, isFeatureGenerated = True)
 
 '''
 how to concat features since some claims do not have quotes

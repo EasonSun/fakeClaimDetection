@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import re
+from extractLGfeatures import extractLGfeatures
 
 # hyper parameter
 overlapThreshold = .018
@@ -87,7 +88,6 @@ def extractRelatedSnippet(claims, articles, articleLabels):
 	# empty string can be taken as all 0 vectors
 	# using both uni- and bi-grams
 	vectorizer = CountVectorizer(analyzer = "word", \
-								token_pattern='(?u)\\b\\w\\w+\\b|!|\\?|\\"|\\\'', #keep !, ?, ', and " as features \
 								preprocessor = None, \
 								stop_words = 'english', \
 								ngram_range=(1, 2))
@@ -145,6 +145,39 @@ def extractRelatedSnippet(claims, articles, articleLabels):
 		'''
 	return relatedSnippet, relatedSnippetLabels, relatedSnippetMarkNumbers
 
+def evaluateHelper(X, y):
+	print("X dim and y dim: ")
+	print(X.shape, y.shape)	#3227, 2929
+	ratioImbalance = np.sum(y) / (y.shape - np.sum(y))
+	print ('ratio of imbalance, positive : negative is %4f' %ratioImbalance)
+	print ("overlapThreshold = %f" %overlapThreshold)
+	print("MIN_DF = %f" %MIN_DF)
+
+	resultFile = open('stanceResult.txt', 'w')
+	resultFile.write("X dim and y dim: \n")
+	nunSample, numFeature = X.shape	
+	resultFile.write('%i, %i \n' %(nunSample, numFeature))
+	resultFile.write ('ratio of imbalance, positive : negative is %4f \n' %ratioImbalance)
+	resultFile.write ("overlapThreshold = %f \n" %overlapThreshold)
+	resultFile.write("MIN_DF = %f \n" %MIN_DF)
+
+	
+	from sklearn.ensemble import RandomForestClassifier
+	forest = RandomForestClassifier(max_features='sqrt')
+
+	from sklearn.model_selection import GridSearchCV
+	# grid = dict(n_estimators=[500, 1000], max_depth=[2000, 2500])
+	grid = dict(n_estimators=[500], max_depth=[2000])
+	forestGS = GridSearchCV(estimator=forest, param_grid=grid, cv=5)
+	forestGS.fit(X, y)
+
+	means = forestGS.cv_results_['mean_test_score']
+	stds = forestGS.cv_results_['std_test_score']
+	for mean, std, params in zip(means, stds, forestGS.cv_results_['params']):
+		print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
+		resultFile.write("%0.3f (+/-%0.03f) for %r \n" % (mean, std * 2, params))
+
+
 def evaluateStance(claims, articles, articleLabels, isFeatureGenerated=False):
 	relatedSnippetX = np.array(0)
 	relatedSnippet_y = np.array(0)
@@ -182,36 +215,7 @@ def evaluateStance(claims, articles, articleLabels, isFeatureGenerated=False):
 		relatedSnippet_y = np.load('relatedSnippet_y.npy')
 		relatedSnippetMarkNumberX = np.load('relatedSnippetMarkNumberX.npy')
 
-	print("relatedSnippetX dim and relatedSnippet_y dim: ")
-	print(relatedSnippetX.shape, relatedSnippet_y.shape)	#3227, 2929
-	ratioImbalance = np.sum(relatedSnippet_y) / (relatedSnippet_y.shape - np.sum(relatedSnippet_y))
-	print ('ratio of imbalance, positive : negative is %4f' %ratioImbalance)
-	print ("overlapThreshold = %f", %overlapThreshold)
-	print("MIN_DF = %f", %MIN_DF)
-
-	resultFile = open('result.txt', 'w')
-	resultFile.write("relatedSnippetX dim and relatedSnippet_y dim: ")
-	resultFile.write(relatedSnippetX.shape, relatedSnippet_y.shape)	#3227, 2929
-	resultFile.write ('ratio of imbalance, positive : negative is %4f' %ratioImbalance)
-	resultFile.write ("overlapThreshold = %f", %overlapThreshold)
-	resultFile.write("MIN_DF = %f", %MIN_DF)
-
-	
-	from sklearn.ensemble import RandomForestClassifier
-	forest = RandomForestClassifier(max_features='sqrt')
-
-	from sklearn.model_selection import GridSearchCV
-	# grid = dict(n_estimators=[500, 1000], max_depth=[2000, 2500])
-	grid = dict(n_estimators=[500], max_depth=[2000])
-	forestGS = GridSearchCV(estimator=forest, param_grid=grid, cv=5)
-	forestGS.fit(relatedSnippetX, relatedSnippet_y)
-
-	means = forestGS.cv_results_['mean_test_score']
-	stds = forestGS.cv_results_['std_test_score']
-	for mean, std, params in zip(means, stds, forestGS.cv_results_['params']):
-		print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
-		resultFile.write("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
-
+	evaluateHelper(relatedSnippetX, relatedSnippet_y)
 	'''
 	RESULTS
 	0.757 (+/-0.019) for {'max_depth': 2000, 'n_estimators': 500}
@@ -240,3 +244,34 @@ def evaluateStance(claims, articles, articleLabels, isFeatureGenerated=False):
 	RESULTS
 	dons't work
 	'''
+
+def evaluateStanceLg(claims, articles, articleLabels, lgFeaturesPath, isFeatureGenerated=False):
+	relatedSnippetLgX = np.array(0)
+	relatedSnippetLg_y = np.array(0)
+	relatedSnippetMarkNumberX = np.array(0)
+	if not isFeatureGenerated:
+		relatedSnippet, relatedSnippetLabels, relatedSnippetMarkNumbers = extractRelatedSnippet(claims, articles, articleLabels)
+		relatedSnippetLg = extractLGfeatures(relatedSnippet, lgFeaturesPath)
+		# too many features!
+		from sklearn.feature_extraction.text import CountVectorizer
+		vectorizer = CountVectorizer(analyzer = "word",   \
+                             tokenizer = None,    \
+                             preprocessor = None, \
+                             #keep !, ?, ', and " as features
+                             token_pattern = '(?u)\\b\\w\\w+\\b|!|\\?|\\"|\\\'', \
+                             stop_words = None) # no need to strip off stop_words because all linguistic features
+		 
+		relatedSnippetLgX = vectorizer.fit_transform(relatedSnippet)
+		print (vectorizer.vocabulary_)
+		return
+		relatedSnippetLgX = relatedSnippetLgX.toarray()
+		np.save('relatedSnippetLgX', relatedSnippetLgX)
+
+		relatedSnippetLg_y = np.array(relatedSnippetLabels)
+		np.save('relatedSnippetLg_y', relatedSnippetLg_y)
+
+	else:
+		relatedSnippetLgX = np.load('relatedSnippetLgX.npy')
+		relatedSnippetLg_y = np.load('relatedSnippetLg_y.npy')
+	
+	evaluateHelper(relatedSnippetLgX, relatedSnippetLg_y)
