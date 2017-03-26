@@ -18,6 +18,7 @@ def extractLGfeatures(claims, lgFeaturesPath):
 
 	afFile = open(allFeaturePath, 'r')
 	allFeatures = set(afFile.read().split())
+	print (len(allFeatures))
 	afFile.close()
 	return helper(claims, allFeatures)
 

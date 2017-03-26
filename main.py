@@ -89,22 +89,22 @@ else:
 	evaluateLG(None, labels, isFeatureGenerated = True)
 '''
 
-'''
+
 # stance classification
 if not (os.path.isfile('relatedSnippetX.npy') 
 		and os.path.isfile('relatedSnippet_y.npy')):
 	evaluateStance(claims, articles, articleLabels)
 else:
 	evaluateStance(None, None, None, isFeatureGenerated = True)
-'''
 
+'''
 # stance classification with linguistic features
 if not (os.path.isfile('relatedSnippetLgX.npy') 
 		and os.path.isfile('relatedSnippetLg_y.npy')):
 	evaluateStanceLg(claims, articles, articleLabels, lgFeaturesPath)
 else:
 	evaluateStanceLg(None, None, None, lgFeaturesPath, isFeatureGenerated = True)
-
+'''
 '''
 how to concat features since some claims do not have quotes
 doesn't matter because stance feature is the stance classifier's score on the articles from the web, which is trained from corpus of Snopes "descriptions."

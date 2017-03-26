@@ -4,7 +4,7 @@ import re
 from extractLGfeatures import extractLGfeatures
 
 # hyper parameter
-overlapThreshold = .018
+overlapThreshold = .02
 MIN_DF = .008
 
 def extractSnippets(article):
@@ -108,12 +108,14 @@ def extractRelatedSnippet(claims, articles, articleLabels):
 			continue 
 		# print (vocab)
 		vectorizer.vocabulary = vocab
-		# assert(vectorizer.vocabulary == vocab)
+		assert(vectorizer.vocabulary == vocab)
 		claimX = vectorizer.fit_transform([claim])
+		assert(vectorizer.vocabulary == vocab)
 		claimX = claimX.toarray()
 		# print(claimX.shape)
 		# print(claimX[0][210])
 		snippetsX = vectorizer.fit_transform(snippets)
+		assert(vectorizer.vocabulary == vocab)
 		snippetsX = snippetsX.toarray()
 		# print(snippetsX.shape)
 		# print (snippetsX[-1][209])
@@ -190,18 +192,34 @@ def evaluateStance(claims, articles, articleLabels, isFeatureGenerated=False):
 		vectorizer = CountVectorizer(analyzer = "word",   \
 		                             tokenizer = None,    \
 		                             preprocessor = None, \
-		                             ngram_range=(1, 2), \
-		                             min_df=MIN_DF)	
+		                             #min_df=MIN_DF, \
+		                             ngram_range=(1, 2))	
 		'''
 		the min df above is really important as the first step for fieature engineering
 		.005 means only keep features apper more than .005 portion of docs
 		that is roughly 486 docs
 		'''
 		relatedSnippetX = vectorizer.fit_transform(relatedSnippet)
+		print (vectorizer.vocabulary_)
 		relatedSnippetX = relatedSnippetX.toarray()
+		relatedSnippet_y = np.array(relatedSnippetLabels)
+
+		'''adjust pos neg ratio'''
+		minNumSample = relatedSnippetX.shape[0] * MIN_DF / 3
+		relatedSnippetPosX = relatedSnippetX[relatedSnippet_y==1]
+		relatedSnippetPosX = relatedSnippetPosX[relatedSnippetPosX > minNumSample]
+		print (relatedSnippetPosX.shape)
+		numPosSample = relatedSnippetPosX.shape[0]
+		relatedSnippetNegX = relatedSnippetX[relatedSnippet_y==0]
+		relatedSnippetNegX = relatedSnippetNegX[relatedSnippetNegX > minNumSample * 3]
+		numNegSample = relatedSnippetNegX.shape[0]
+		print (relatedSnippetNegX.shape)
+		relatedSnippetX = np.concatenate((relatedSnippetPosX, relatedSnippetNegX))
+		print (relatedSnippetX.shape)
+		return
 		np.save('relatedSnippetX', relatedSnippetX)
 
-		relatedSnippet_y = np.array(relatedSnippetLabels)
+		relatedSnippet_y = np.concatenate((np.ones(numPosSample), np.zeros(numNegSample)))
 		np.save('relatedSnippet_y', relatedSnippet_y)
 
 		relatedSnippetMarkNumberX = np.array(relatedSnippetMarkNumbers)
@@ -260,10 +278,10 @@ def evaluateStanceLg(claims, articles, articleLabels, lgFeaturesPath, isFeatureG
                              #keep !, ?, ', and " as features
                              token_pattern = '(?u)\\b\\w\\w+\\b|!|\\?|\\"|\\\'', \
                              stop_words = None) # no need to strip off stop_words because all linguistic features
-		 
-		relatedSnippetLgX = vectorizer.fit_transform(relatedSnippet)
-		print (vectorizer.vocabulary_)
-		return
+		
+		relatedSnippetLgX = vectorizer.fit_transform(relatedSnippetLg)
+		# print (vectorizer.vocabulary_)
+		
 		relatedSnippetLgX = relatedSnippetLgX.toarray()
 		np.save('relatedSnippetLgX', relatedSnippetLgX)
 
