@@ -28,6 +28,10 @@ class Network:
     CTmatrix = {}
     CFmatrix = {}
 
+    # TODO
+    # 1. add relation
+    # 2. keep np matrix property
+
     def __init__(self, snopesfolder=None):
         self.snope_folder = snopesfolder if snopesfolder else "Snopes"
 
@@ -182,20 +186,20 @@ class Network:
     ### Get relation matrices 
     '''
     # Return relation matrix in np array
-    def getClaimSourceMatrix(self):
+    def getClaimSourceMatrix(self, filename=None):
         claim_size = self.claimMaxId+1
         source_size = self.sourceMaxId+1
-        return self.__getMatrix(self.CSmatrix, claim_size, source_size, "claim_source")
+        return self.__getMatrix(self.CSmatrix, claim_size, source_size, filename)
 
-    def getClaimTopicMatrix(self):
+    def getClaimTopicMatrix(self, filename=None):
         claim_size = self.claimMaxId + 1
         topic_size = self.topicMaxId + 1
-        return self.__getMatrix(self.CTmatrix, claim_size, topic_size, "claim_topic")
+        return self.__getMatrix(self.CTmatrix, claim_size, topic_size, filename)
 
-    def getClaimStanceFeatureMatrix(self):
+    def getClaimStanceFeatureMatrix(self, filename=None):
         claim_size = self.claimMaxId + 1
         feature_size = self.stanceFeatureMaxId + 1
-        return self.__getMatrix(self.CFmatrix, claim_size, feature_size, "claim_feature")
+        return self.__getMatrix(self.CFmatrix, claim_size, feature_size, filename)
 
     def __getMatrix(self, relation_matrix, dim1, dim2, filename=None):
         matrix = np.zeros((dim1, dim2))
@@ -207,12 +211,9 @@ class Network:
         return matrix
 
 
-
-
-
 if __name__ == "__main__":
     network = Network("Snopes")
-    csmatrix = network.getClaimSourceMatrix()
+    csmatrix = network.getClaimSourceMatrix("array")
     original_csmatrix = network.CSmatrix
     # testing
     for i in range(1000):
