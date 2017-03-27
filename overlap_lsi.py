@@ -13,14 +13,18 @@ def overlap(snippets,claim,num_topics=2):
     #the snippets of one article, and one claim from the same article
     #num_topics is the number of topics that we want to classify
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-    texts = [[word for word in document.lower().split()] for document in snippets]
-    """    
+    #texts = [[word for word in document.lower().split()] for document in snippets]
+
+    texts = []
     vectorizer = CountVectorizer(analyzer = "word",   \
                              tokenizer = None,    \
                              preprocessor = None, \
+                             stop_words = 'english', \
                              ngram_range=(1, 2))        
-    featureVector = vectorizer.fit_transform(snippets)
-    """
+    for i in range(len(snippets)):
+        vectorizer.fit_transform([snippets[i]])
+        texts.append(list(vectorizer.vocabulary_))
+
     dictionary = corpora.Dictionary(texts)
     corpus = [dictionary.doc2bow(text) for text in texts]
     tfidf = models.TfidfModel(corpus)
