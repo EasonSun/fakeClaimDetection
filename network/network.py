@@ -29,7 +29,7 @@ class Network:
     CFmatrix = {}
 
     # TODO
-    # 1. add relation
+    # 1. add relation (get once when usingu)
     # 2. keep np matrix property
 
     def __init__(self, snopesfolder=None):
@@ -99,6 +99,8 @@ class Network:
 
     def getClaimSize(self):
         return self.claimMaxId+1
+
+    # needs somehow generate labels while testing
 
     '''
     #####   source related

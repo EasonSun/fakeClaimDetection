@@ -2,154 +2,16 @@ import numpy as np
 import os
 import re
 from extractLGfeatures import extractLGfeatures
+from extractRelatedSnippets import extractRelatedSnippets
 
 # hyper parameter
-overlapThreshold = .02
-MIN_DF = .008
+MIN_DF = .005
+overlapThreshold = .04
 
-def extractSnippets(article):
-    snippets = []
-    snippetMarkNumbers = []	#list of list, inner list records number of ! ? ""
-    NSS = 4 # number of a snippet in a sentence
-    #articleSentences = re.split(r'[.|!|?]', article)
-    articleSentences = []
-    articleSentencesWithMarks = []
-    sentence = ''
-    for c in article:
-    	if c not in ['?', '!', '.']:
-    		sentence += c
-    	else:
-    		articleSentences.append(sentence)
-    		if c in ['?', '!']:
-    			sentence += c
-    		else:
-    			sentence += ' '
-    		articleSentencesWithMarks.append(sentence)
-    		sentence = ''
-    # print(articleSentences)
-    # no stripped kinda needed: like $100, "bill", these are critical
-    # but vocab from the vectorizer is without these 
-    for i in range(len(articleSentences)):
-    	articleSentences[i] = " ".join(re.findall("[a-zA-Z0-9]+", articleSentences[i])) + ' '
-    # print(articleSentences)
-    while '' in articleSentences:
-        articleSentences.remove('')
-    while '' in articleSentencesWithMarks:
-        articleSentencesWithMarks.remove('')
-    for i in range(len(articleSentences) - NSS + 1):
-        temp = articleSentences[i : i+NSS]
-        snippet = ""
-        for j in range(NSS):
-            snippet = snippet + temp[j]
-        snippets.append(snippet)
-
-        snippetMarkNumber = [0,0,0]
-        for j in range(NSS):
-        	curSentence = articleSentencesWithMarks[i+j]
-        	if '!' in curSentence:
-        		snippetMarkNumber[0] = 1
-        	if '?' in curSentence:
-        		snippetMarkNumber[1] = 1
-        	if '"' in curSentence:
-        		snippetMarkNumber[2] = 1
-
-        snippetMarkNumbers.append(snippetMarkNumber)
-
-    return snippets, snippetMarkNumbers
-
-def extractVocab(claims, snippets, vectorizer):
-	result = {}
-	try:
-		raw1 = vectorizer.fit(claims).vocabulary_
-		raw2 = vectorizer.fit(snippets).vocabulary_
-	except ValueError:
-		return {}
-	# print (raw2)
-	nextValue = 0
-	for key, value in raw1.items():
-		if key not in result.keys():
-			result[key] = nextValue
-			nextValue += 1
-			# print (key)
-	for key, value in raw2.items():
-		if key not in result.keys():
-			result[key] = nextValue
-			nextValue += 1
-			# print (key)
-	return result
-	
-
-def extractRelatedSnippet(claims, articles, articleLabels):
-	relatedSnippet = []
-	relatedSnippetLabels = []
-	relatedSnippetMarkNumbers = []	# record number of ! ? "", list of list
-
-	from sklearn.feature_extraction.text import CountVectorizer
-	# empty string can be taken as all 0 vectors
-	# using both uni- and bi-grams
-	vectorizer = CountVectorizer(analyzer = "word", \
-								preprocessor = None, \
-								stop_words = 'english', \
-								ngram_range=(1, 2))
-	                             #max_features = 5000) 
-
-	from sklearn.metrics.pairwise import cosine_similarity
-
-	# claim: str, article: str, articleLabel: int
-	for claim, article, articleLabel in zip(claims, articles, articleLabels):
-		#print (article)
-		# print (claim)
-		snippets, snippetMarkNumbers = extractSnippets(article)
-		# find vocab for this pair so as to do vector similarity
-		vectorizer.vocabulary = None
-		vocab = extractVocab([claim], snippets, vectorizer)
-		if len(vocab.keys()) == 0:
-			# bad thing can happen
-			continue 
-		# print (vocab)
-		vectorizer.vocabulary = vocab
-		assert(vectorizer.vocabulary == vocab)
-		claimX = vectorizer.fit_transform([claim])
-		assert(vectorizer.vocabulary == vocab)
-		claimX = claimX.toarray()
-		# print(claimX.shape)
-		# print(claimX[0][210])
-		snippetsX = vectorizer.fit_transform(snippets)
-		assert(vectorizer.vocabulary == vocab)
-		snippetsX = snippetsX.toarray()
-		# print(snippetsX.shape)
-		# print (snippetsX[-1][209])
-
-		similarityScore = cosine_similarity(claimX, snippetsX)
-		if (np.count_nonzero(similarityScore) == 0):
-			# bad and weird thing happens 
-			continue
-		minSimilarityScore = np.min(similarityScore[np.nonzero(similarityScore)])
-		if (minSimilarityScore < overlapThreshold):
-			continue
-		# print (minSimilarityScore)
-		overlapIdx = np.where(cosine_similarity(snippetsX, claimX) > overlapThreshold)[0]
-		#print (overlapIdx)
-		relatedSnippetLabels.extend([articleLabel for i in range(len(overlapIdx))])
-		snippets = np.array([[snippet] for snippet in snippets])
-		#print (snippets.shape)
-		# from vector back to sentence to later use them in the same feature space
-		relatedSnippet.extend([''.join(snippet) for snippet in snippets[overlapIdx].tolist()])
-		relatedSnippetMarkNumbers.extend([snippetMarkNumbers[i] for i in overlapIdx])
-		#print(relatedSnippet)
-		#print(relatedSnippetLabels)
-		'''
-		# printStat
-		print (claim)
-		print(claimX.shape)
-		print(snippetsX.shape)
-		print (minSimilarityScore)
-		'''
-	return relatedSnippet, relatedSnippetLabels, relatedSnippetMarkNumbers
-
-def evaluateHelper(X, y):
-	print("X dim and y dim: ")
-	print(X.shape, y.shape)	#3227, 2929
+def evaluateHelper(X, y, feature_names=None):
+	nunSample, numFeature = X.shape	
+	print("nunSample, numFeature: ")
+	print (nunSample, numFeature)	#3227, 2929
 	ratioImbalance = np.sum(y) / (y.shape - np.sum(y))
 	print ('ratio of imbalance, positive : negative is %4f' %ratioImbalance)
 	print ("overlapThreshold = %f" %overlapThreshold)
@@ -163,10 +25,30 @@ def evaluateHelper(X, y):
 	resultFile.write ("overlapThreshold = %f \n" %overlapThreshold)
 	resultFile.write("MIN_DF = %f \n" %MIN_DF)
 
-	
+	#http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html#sklearn.ensemble.RandomForestClassifier.get_params
 	from sklearn.ensemble import RandomForestClassifier
-	forest = RandomForestClassifier(max_features='sqrt')
+	forest = RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2)
 
+
+	from sklearn.model_selection import KFold
+	kf = KFold(n_splits=5)
+	importances = np.zeros(numFeature)
+	for train_index, test_index in kf.split(X):
+		# print("TRAIN:", train_index, "TEST:", test_index)
+		X_train, X_test = X[train_index], X[test_index]
+		y_train, y_test = y[train_index], y[test_index]
+		forest.fit(X, y)
+		importances += forest.feature_importances_
+	importances /= 5
+	top10PercentIdx = np.argsort(importances)#[-int(numFeature*.1):]
+
+	# top10Features = [feature_names[id] f]
+	topFeatureFile = open('topFeatures.txt', 'w')
+	for id in top10PercentIdx:
+		topFeatureFile.write(str(feature_names[id])+'\t'+str(importances[id])+'\n')
+	# needs to split training and testing 
+
+	'''
 	from sklearn.model_selection import GridSearchCV
 	# grid = dict(n_estimators=[500, 1000], max_depth=[2000, 2500])
 	grid = dict(n_estimators=[500], max_depth=[2000])
@@ -178,21 +60,22 @@ def evaluateHelper(X, y):
 	for mean, std, params in zip(means, stds, forestGS.cv_results_['params']):
 		print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
 		resultFile.write("%0.3f (+/-%0.03f) for %r \n" % (mean, std * 2, params))
-
-
-def evaluateStance(claims, articles, articleLabels, isFeatureGenerated=False):
+	'''
+	
+def evaluateStance(claims, articles, articleLabels, isSnippetGenerated=False):
 	relatedSnippetX = np.array(0)
 	relatedSnippet_y = np.array(0)
-	relatedSnippetMarkNumberX = np.array(0)
-	if not isFeatureGenerated:
-		relatedSnippet, relatedSnippetLabels, relatedSnippetMarkNumbers = extractRelatedSnippet(claims, articles, articleLabels)
+	# relatedSnippetMarkNumberX = np.array(0)
+	if not isSnippetGenerated:
+		relatedSnippet, relatedSnippetLabels = extractRelatedSnippets(claims, articles, articleLabels, overlapThreshold)
 		from sklearn.feature_extraction.text import CountVectorizer
 		# empty string can be taken as all 0 vectors
 		# using both uni- and bi-grams
-		vectorizer = CountVectorizer(analyzer = "word",   \
+		vectorizer = CountVectorizer(analyzer = "word", \
+									 stop_words = "english",   \
 		                             tokenizer = None,    \
 		                             preprocessor = None, \
-		                             #min_df=MIN_DF, \
+		                             min_df=MIN_DF, \
 		                             ngram_range=(1, 2))	
 		'''
 		the min df above is really important as the first step for fieature engineering
@@ -200,30 +83,20 @@ def evaluateStance(claims, articles, articleLabels, isFeatureGenerated=False):
 		that is roughly 486 docs
 		'''
 		relatedSnippetX = vectorizer.fit_transform(relatedSnippet)
-		print (vectorizer.vocabulary_)
-		relatedSnippetX = relatedSnippetX.toarray()
+		# print (vectorizer.vocabulary_)
+		relatedSnippetX = (relatedSnippetX.toarray()).astype(float)
+		from sklearn.feature_extraction.text import TfidfTransformer
+		transformer = TfidfTransformer(smooth_idf=False)
+		relatedSnippetX = transformer.fit_transform(relatedSnippetX)
 		relatedSnippet_y = np.array(relatedSnippetLabels)
 
-		'''adjust pos neg ratio'''
-		minNumSample = relatedSnippetX.shape[0] * MIN_DF / 3
-		relatedSnippetPosX = relatedSnippetX[relatedSnippet_y==1]
-		relatedSnippetPosX = relatedSnippetPosX[relatedSnippetPosX > minNumSample]
-		print (relatedSnippetPosX.shape)
-		numPosSample = relatedSnippetPosX.shape[0]
-		relatedSnippetNegX = relatedSnippetX[relatedSnippet_y==0]
-		relatedSnippetNegX = relatedSnippetNegX[relatedSnippetNegX > minNumSample * 3]
-		numNegSample = relatedSnippetNegX.shape[0]
-		print (relatedSnippetNegX.shape)
-		relatedSnippetX = np.concatenate((relatedSnippetPosX, relatedSnippetNegX))
-		print (relatedSnippetX.shape)
-		return
 		np.save('relatedSnippetX', relatedSnippetX)
-
-		relatedSnippet_y = np.concatenate((np.ones(numPosSample), np.zeros(numNegSample)))
 		np.save('relatedSnippet_y', relatedSnippet_y)
+		evaluateHelper(relatedSnippetX, relatedSnippet_y, feature_names = vectorizer.get_feature_names())
 
-		relatedSnippetMarkNumberX = np.array(relatedSnippetMarkNumbers)
-		np.save('relatedSnippetMarkNumberX', relatedSnippetMarkNumberX)
+
+		#relatedSnippetMarkNumberX = np.array(relatedSnippetMarkNumbers)
+		#np.save('relatedSnippetMarkNumberX', relatedSnippetMarkNumberX)
 
 		# print("relatedSnippetX dim and relatedSnippet_y dim: ")
 		# print(relatedSnippetX.shape, relatedSnippet_y.shape)
@@ -231,9 +104,9 @@ def evaluateStance(claims, articles, articleLabels, isFeatureGenerated=False):
 	else:
 		relatedSnippetX = np.load('relatedSnippetX.npy')
 		relatedSnippet_y = np.load('relatedSnippet_y.npy')
-		relatedSnippetMarkNumberX = np.load('relatedSnippetMarkNumberX.npy')
+		# relatedSnippetMarkNumberX = np.load('relatedSnippetMarkNumberX.npy')
 
-	evaluateHelper(relatedSnippetX, relatedSnippet_y)
+		evaluateHelper(relatedSnippetX, relatedSnippet_y)
 	'''
 	RESULTS
 	0.757 (+/-0.019) for {'max_depth': 2000, 'n_estimators': 500}
@@ -263,12 +136,12 @@ def evaluateStance(claims, articles, articleLabels, isFeatureGenerated=False):
 	dons't work
 	'''
 
-def evaluateStanceLg(claims, articles, articleLabels, lgFeaturesPath, isFeatureGenerated=False):
+def evaluateStanceLg(claims, articles, articleLabels, lgFeaturesPath, isSnippetGenerated=False):
 	relatedSnippetLgX = np.array(0)
 	relatedSnippetLg_y = np.array(0)
-	relatedSnippetMarkNumberX = np.array(0)
-	if not isFeatureGenerated:
-		relatedSnippet, relatedSnippetLabels, relatedSnippetMarkNumbers = extractRelatedSnippet(claims, articles, articleLabels)
+	# relatedSnippetMarkNumberX = np.array(0)
+	if not isSnippetGenerated:
+		relatedSnippet, relatedSnippetLabels = extractRelatedSnippets(claims, articles, articleLabels)
 		relatedSnippetLg = extractLGfeatures(relatedSnippet, lgFeaturesPath)
 		# too many features!
 		from sklearn.feature_extraction.text import CountVectorizer
@@ -292,4 +165,4 @@ def evaluateStanceLg(claims, articles, articleLabels, lgFeaturesPath, isFeatureG
 		relatedSnippetLgX = np.load('relatedSnippetLgX.npy')
 		relatedSnippetLg_y = np.load('relatedSnippetLg_y.npy')
 	
-	evaluateHelper(relatedSnippetLgX, relatedSnippetLg_y)
+	evaluateHelper(relatedSnippetLgX, relatedSnippetLg_y, vectorizer.feature_names)

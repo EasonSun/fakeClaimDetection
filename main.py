@@ -36,6 +36,7 @@ claims = []
 labels = []
 articles = []
 articleLabels = []
+claimsWithArticle = []
 
 '''
 with open(dataPath, "r") as inFile:
@@ -53,7 +54,7 @@ for item in data:
 '''
 for filePath in os.listdir(dataPath):
 	if filePath.endswith('.json'):
-		file = open(os.path.join(dataPath, filePath), 'r')
+		file = open(os.path.join(dataPath, filePath), 'r', encoding="utf-8")
 		data.append(json.load(file))
 
 for item in data:	# each item is a dict
@@ -68,6 +69,7 @@ for item in data:	# each item is a dict
 		print (item['Claim_ID'], item['Credibility'])
 	# descriptions
 	if item['Description'] != '':
+		claimsWithArticle.append(item['Claim'])
 		articles.append(item['Description']) 
 		if item['Credibility'] in ['true', 'mostly true']: 
 			articleLabels.append(0)	# for
@@ -93,7 +95,7 @@ else:
 # stance classification
 if not (os.path.isfile('relatedSnippetX.npy') 
 		and os.path.isfile('relatedSnippet_y.npy')):
-	evaluateStance(claims, articles, articleLabels)
+	evaluateStance(claimsWithArticle, articles, articleLabels)
 else:
 	evaluateStance(None, None, None, isFeatureGenerated = True)
 
@@ -101,7 +103,7 @@ else:
 # stance classification with linguistic features
 if not (os.path.isfile('relatedSnippetLgX.npy') 
 		and os.path.isfile('relatedSnippetLg_y.npy')):
-	evaluateStanceLg(claims, articles, articleLabels, lgFeaturesPath)
+	evaluateStanceLg(claimsWithArticle, articles, articleLabels, lgFeaturesPath)
 else:
 	evaluateStanceLg(None, None, None, lgFeaturesPath, isFeatureGenerated = True)
 '''
