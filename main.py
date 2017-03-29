@@ -56,6 +56,7 @@ for filePath in os.listdir(dataPath):
 	if filePath.endswith('.json'):
 		file = open(os.path.join(dataPath, filePath), 'r', encoding="utf-8")
 		data.append(json.load(file))
+		file.close()
 
 for item in data:	# each item is a dict
 	# claim

@@ -10,6 +10,8 @@ from sklearn.feature_extraction.text import CountVectorizer
 import logging
 import numpy as np
 import re
+import warnings
+warnings.filterwarnings("error")
 
 def overlap(snippets,claim,num_topics=2):
     # print(snippets) if (snippets == [])
@@ -33,10 +35,21 @@ def overlap(snippets,claim,num_topics=2):
             print (snippets)
             return
         texts.append(list(vectorizer.vocabulary_))
-
-    dictionary = corpora.Dictionary(texts)
-    corpus = [dictionary.doc2bow(text) for text in texts]
-    tfidf = models.TfidfModel(corpus)
+    try:
+        dictionary = corpora.Dictionary(texts)
+    except RuntimeWarning:
+        print (claim)
+        print (snippets)
+    try:
+        corpus = [dictionary.doc2bow(text) for text in texts]
+    except RuntimeWarning:
+        print (claim)
+        print (snippets)
+    try:
+        tfidf = models.TfidfModel(corpus)
+    except RuntimeWarning:
+        print (claim)
+        print (snippets)
     # print(tfidf)
     corpus_tfidf = tfidf[corpus]
     # print(corpus_tfidf)
@@ -46,12 +59,18 @@ def overlap(snippets,claim,num_topics=2):
     except (ValueError, RuntimeWarning):
         print (claim)
         print (snippets)
+    if len(snippets)<=4:
+        corpus_tfidf = corpus
     corpus_lsi = lsi[corpus_tfidf]
     # print(corpus_lsi)
     index = similarities.MatrixSimilarity(lsi[corpus])
     # print (index)
     # print (claim.lower().split())
-    claim_bow = dictionary.doc2bow(claim.lower().split())
+    try:
+        claim_bow = dictionary.doc2bow(claim.lower().split())
+    except RuntimeWarning:
+        print (claim)
+        print (snippets)
     # print(claim_bow)
     claim_lsi = lsi[claim_bow]
     # print (claim_lsi)

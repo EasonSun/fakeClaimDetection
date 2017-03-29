@@ -6,7 +6,7 @@ from extractRelatedSnippets import extractRelatedSnippets
 
 # hyper parameter
 MIN_DF = .005
-overlapThreshold = .04
+overlapThreshold = .035
 
 def evaluateHelper(X, y, feature_names=None):
 	nunSample, numFeature = X.shape	

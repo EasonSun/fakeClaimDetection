@@ -1,7 +1,6 @@
 import numpy as np
 import re
 from overlap_lsi import overlap
-overlapThreshold = .85 #.02
 
 def extractSnippets(article):
     snippets = []
@@ -103,7 +102,7 @@ def extractVocab(claims, snippets, vectorizer):
     return result
     
 
-def extractRelatedSnippets(claims, articles, articleLabels):
+def extractRelatedSnippets(claims, articles, articleLabels, overlapThreshold):
     relatedSnippet = []
     relatedSnippetLabels = []
     #relatedSnippetMarkNumbers = []  # record number of ! ? "", list of list
@@ -117,7 +116,7 @@ def extractRelatedSnippets(claims, articles, articleLabels):
                                 ngram_range=(1, 2))
                                  #max_features = 5000) 
 
-    from sklearn.metrics.pairwise import cosine_similarity
+    #from sklearn.metrics.pairwise import cosine_similarity
 
     # claim: str, article: str, articleLabel: int
     for claim, article, articleLabel in zip(claims, articles, articleLabels):
@@ -135,7 +134,7 @@ def extractRelatedSnippets(claims, articles, articleLabels):
             np.save('ldaSimScore.npy', sims)
         '''
         _, sims = overlap(snippets, claim)
-        print (sims)
+        # print (sims)
 
         overlapIdx = np.where(sims > overlapThreshold)[0]
         #print (overlapIdx)
