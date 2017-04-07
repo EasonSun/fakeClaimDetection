@@ -6,7 +6,6 @@ Created on Mon Mar 27 07:22:28 2017
 """
 
 from gensim import corpora, models, similarities
-from sklearn.feature_extraction.text import CountVectorizer
 import logging
 import numpy as np
 import re
@@ -22,6 +21,7 @@ def overlap(snippets,claim,num_topics=2):
     claim = " ".join(re.findall("[a-zA-Z0-9]+", claim))
     texts = []
     # print(type(claim))
+    from sklearn.feature_extraction.text import CountVectorizer
     vectorizer = CountVectorizer(analyzer = "word",   \
                              tokenizer = None,    \
                              preprocessor = None, \
