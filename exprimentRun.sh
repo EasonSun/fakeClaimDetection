@@ -1,24 +1,30 @@
 #!/bin/bash
-dataPath='data/Snopes'
-lgFeaturesPath='data/linguisticFeatures/'
-resultPath='results/'
-srcPath='src/'
-experimentPath='results/experiment $1/'
-experimentLogPath='results/log.txt'
-
+dataPath="data/Snopes"
+lgFeaturesPath="data/linguisticFeatures/"
+stopwordsPath="data/stopword.txt"
+resultPath="results/"
+srcPath="src/"
+experimentPath="results/experiment_$1/"
+experimentLogPath="$experimentPath_log"
+txt="txt"
+### experimentLogPath="$experimentLogPath.$txt"	###??? doesn't work?
 
 ###	intialize experiment
-mkdir experimentPath
-touch experimentLogPath
+if [ ! -e $experimentPath ]
+then
+	mkdir $experimentPath
+	touch $experimentLogPath
+fi
 
-cd srcPath
-overlapThreshold='.09'
-MIN_DF='.005'
-MAX_DF='.38'
+overlapThreshold=".04"
+# tweek the following parameters when you have related snippets
+MIN_DF=".006"
+MAX_DF=".5"
 echo overlapThreshold >> experimentLogPath
 ### read data
-python3 readData.py $$dataPath $experimentPath
+python3 src/readData.py $dataPath $experimentPath
 ### extract related snippets
-python3 extractRelatedSnippets.py $experimentPath $overlapThreshold
+python3 src/extractRelatedSnippets.py $experimentPath $overlapThreshold $stopwordsPath
 ### evaluate stance classifier
-python3 evaluateStance.py $experimentPath $MIN_DF $MAX_DF $experimentLogPath
+python3 src/evaluateStance.py $experimentPath $MIN_DF $MAX_DF $experimentLogPath
+### evaluate claim credibility

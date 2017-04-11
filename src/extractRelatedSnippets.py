@@ -1,13 +1,17 @@
 import numpy as np
 import re
+import sys
+import os 
+
 #from overlap_lsi import overlap
 experimentPath = sys.argv[1]
 claimPath = experimentPath + 'claims.txt'
 articlePath = experimentPath + 'articles.txt'
-credPath = experimentPath + 'cred.npy'
+stancePath = experimentPath + 'stance.npy'
 relatedSnippetsPath = os.path.join(experimentPath, 'relatedSnippets.txt')
 relatedSnippetLabelsPath = os.path.join(experimentPath, 'relatedSnippetLabels')
-overlapThreshold = int(sys.argv[2])
+overlapThreshold = float(sys.argv[2])
+stopwordsPath = sys.argv[3]
 
 def extractSnippets(article):
     snippets = []
@@ -47,7 +51,7 @@ def extractSnippets(article):
     
     if (len(articleSentences) < NSS):
         return [" ".join(articleSentences)]
-    for i in range(len(articleSentences) - NSS + 1):
+    for i in range(0, len(articleSentences) - NSS + 1, NSS):
         temp = articleSentences[i : i+NSS]
         snippet = ""
         for j in range(NSS):
@@ -56,6 +60,8 @@ def extractSnippets(article):
             else:
                 snippet += ' ' + temp[j]
         snippets.append(snippet)
+
+        # grab non overlapping snippets
         '''
         snippetMarkNumber = [0,0,0]
         for j in range(NSS):
@@ -134,140 +140,143 @@ def clean(snippet, stopWords):
     return cleanedSnippets
 
 
-if os.path.isfile(relatedSnippetsPath):
-    return
+def main():
+    print ("overlapThreshold = %f" %overlapThreshold)
 
-claimFile = open(claimPath)
-claims = []
-with open(claimFile) as f:
-    claims = f.readlines()
-claims = [x.strip() for x in claims] 
+    if os.path.isfile(relatedSnippetsPath):
+        return
 
-articleFile = open(articlePath)
-articles = []
-with open(articleFile) as f:
-    articles = f.readlines()
-articles = [x.strip() for x in articles] 
+    claims = []
+    with open(claimPath) as f:
+        claims = f.readlines()
+    claims = [x.strip() for x in claims] 
 
-articleLabels = np.load(credPath)
+    articles = []
+    with open(articlePath) as f:
+        articles = f.readlines()
+    articles = [x.strip() for x in articles] 
+
+    articleLabels = np.load(stancePath)
 
 
-relatedSnippets = []
-relatedSnippetLabels = []
-#relatedSnippetMarkNumbers = []  # record number of ! ? "", list of list
+    relatedSnippets = []
+    relatedSnippetLabels = []
+    #relatedSnippetMarkNumbers = []  # record number of ! ? "", list of list
 
-from sklearn.feature_extraction.text import CountVectorizer
-# empty string can be taken as all 0 vectors
-# using both uni- and bi-grams
-vectorizer = CountVectorizer(analyzer = "word", \
-                            preprocessor = None, \
-                            # should not use stop words, otherwise numbers and some other entities gets down.
-                            # stop_words = 'english', \
-                            ngram_range=(1, 2))
-                             #max_features = 5000) 
+    from sklearn.feature_extraction.text import CountVectorizer
+    # empty string can be taken as all 0 vectors
+    # using both uni- and bi-grams
+    vectorizer = CountVectorizer(analyzer = "word", \
+                                preprocessor = None, \
+                                # watch out stop words, should not extract named entities!
+                                # possible number entities like sixty
+                                stop_words = 'english', \
+                                ngram_range=(1, 2))
+                                 #max_features = 5000) 
 
-from sklearn.metrics.pairwise import cosine_similarity
+    from sklearn.metrics.pairwise import cosine_similarity
 
-# claim: str, article: str, articleLabel: int
-for claim, article, articleLabel in zip(claims, articles, articleLabels):
-    # print (article)
-    # print (claim)
-    snippets = extractSnippets(article)
-    # print (snippets)
+    # claim: str, article: str, articleLabel: int
+    for claim, article, articleLabel in zip(claims, articles, articleLabels):
+        # print (article)
+        # print (claim)
+        snippets = extractSnippets(article)
+        # print (snippets)
 
-    '''
-    # you need to save by concat
-    sims = np(0)
-    if os.path.isfile('ldaSimScore.npy'):
-        sims = np.load('ldaSimScore.npy')
-    else:
+        '''
+        # you need to save by concat
+        sims = np(0)
+        if os.path.isfile('ldaSimScore.npy'):
+            sims = np.load('ldaSimScore.npy')
+        else:
+            _, sims = overlap(snippets, claim)
+            np.save('ldaSimScore.npy', sims)
+        '''
+
+        '''
+        # use lda to calculate similarity
         _, sims = overlap(snippets, claim)
-        np.save('ldaSimScore.npy', sims)
-    '''
+        # print (sims)
+
+        overlapIdx = np.where(sims > overlapThreshold)[0]
+        #print (overlapIdx)
+        relatedSnippetLabels.extend([articleLabel for i in range(len(overlapIdx))])
+        snippets = np.array([[snippet] for snippet in snippets])
+        #print (snippets.shape)
+        # from vector back to sentence to later use them in the same feature space
+        relatedSnippet.extend([''.join(snippet) for snippet in snippets[overlapIdx].tolist()])
+        # relatedSnippetMarkNumbers.extend([snippetMarkNumbers[i] for i in overlapIdx])
+        # print(relatedSnippet)
+        #print(relatedSnippetLabels)
+        '''
+        
+        # find vocab for this pair so as to do vector similarity
+        vectorizer.vocabulary = None
+        vocab = extractVocab([claim], snippets, vectorizer)
+        if len(vocab.keys()) == 0:
+            # bad thing can happen
+            continue 
+        # print (vocab)
+        vectorizer.vocabulary = vocab
+        assert(vectorizer.vocabulary == vocab)
+        claimX = vectorizer.fit_transform([claim])
+        assert(vectorizer.vocabulary == vocab)
+        claimX = claimX.toarray()
+        # print(claimX.shape)
+        # print(claimX[0][210])
+        snippetsX = vectorizer.fit_transform(snippets)
+        assert(vectorizer.vocabulary == vocab)
+        snippetsX = snippetsX.toarray()
+        # print(snippetsX.shape)
+
+        similarityScore = cosine_similarity(claimX, snippetsX)
+        # print (similarityScore)
+        if (np.count_nonzero(similarityScore) == 0):
+            # bad and weird thing happens 
+            continue
+        minSimilarityScore = np.min(similarityScore[np.nonzero(similarityScore)])
+        if (minSimilarityScore < overlapThreshold):
+            continue
+        # print (minSimilarityScore)
+        overlapIdx = np.where(cosine_similarity(snippetsX, claimX) > overlapThreshold)[0]
+        #print (overlapIdx)
+        relatedSnippetLabels.extend([articleLabel for i in range(len(overlapIdx))])
+        snippets = np.array([[snippet] for snippet in snippets])
+        #print (snippets.shape)
+        # from vector back to sentence to later use them in the same feature space
+        relatedSnippet = [''.join(snippet) for snippet in snippets[overlapIdx].tolist()]
+        relatedSnippets.extend(relatedSnippet)
+        # relatedSnippetMarkNumbers.extend([snippetMarkNumbers[i] for i in overlapIdx])
+        #print(relatedSnippets)
+        #print(relatedSnippetLabels)
 
     '''
-    # use lda to calculate similarity
-    _, sims = overlap(snippets, claim)
-    # print (sims)
+    stopWords read from file, because the sklearn one is not enough
+    handled by NER
+    'january','february','march','april','june','july','august','september','october','november','defnamecember',
 
-    overlapIdx = np.where(sims > overlapThreshold)[0]
-    #print (overlapIdx)
-    relatedSnippetLabels.extend([articleLabel for i in range(len(overlapIdx))])
-    snippets = np.array([[snippet] for snippet in snippets])
-    #print (snippets.shape)
-    # from vector back to sentence to later use them in the same feature space
-    relatedSnippet.extend([''.join(snippet) for snippet in snippets[overlapIdx].tolist()])
-    # relatedSnippetMarkNumbers.extend([snippetMarkNumbers[i] for i in overlapIdx])
-    # print(relatedSnippet)
-    #print(relatedSnippetLabels)
+    too harsh
+    "every", "never", "whenever", "wherever", "whatever", "whoever", "anyhow", "anyway", "anywhere", "any", "always"
+
+    neg
+    'no', 'not'
     '''
-    
-    # find vocab for this pair so as to do vector similarity
-    vectorizer.vocabulary = None
-    vocab = extractVocab([claim], snippets, vectorizer)
-    if len(vocab.keys()) == 0:
-        # bad thing can happen
-        continue 
-    # print (vocab)
-    vectorizer.vocabulary = vocab
-    assert(vectorizer.vocabulary == vocab)
-    claimX = vectorizer.fit_transform([claim])
-    assert(vectorizer.vocabulary == vocab)
-    claimX = claimX.toarray()
-    # print(claimX.shape)
-    # print(claimX[0][210])
-    snippetsX = vectorizer.fit_transform(snippets)
-    assert(vectorizer.vocabulary == vocab)
-    snippetsX = snippetsX.toarray()
-    # print(snippetsX.shape)
+    stopWords = []  
+    with open(stopwordsPath) as f:
+        stopWords = f.readlines()
+        stopWords = [x.strip() for x in stopWords] 
 
-    similarityScore = cosine_similarity(claimX, snippetsX)
-    # print (similarityScore)
-    if (np.count_nonzero(similarityScore) == 0):
-        # bad and weird thing happens 
-        continue
-    minSimilarityScore = np.min(similarityScore[np.nonzero(similarityScore)])
-    if (minSimilarityScore < overlapThreshold):
-        continue
-    # print (minSimilarityScore)
-    overlapIdx = np.where(cosine_similarity(snippetsX, claimX) > overlapThreshold)[0]
-    #print (overlapIdx)
-    relatedSnippetLabels.extend([articleLabel for i in range(len(overlapIdx))])
-    snippets = np.array([[snippet] for snippet in snippets])
-    #print (snippets.shape)
-    # from vector back to sentence to later use them in the same feature space
-    relatedSnippet = [''.join(snippet) for snippet in snippets[overlapIdx].tolist()]
-    relatedSnippets.extend(relatedSnippet)
-    # relatedSnippetMarkNumbers.extend([snippetMarkNumbers[i] for i in overlapIdx])
-    #print(relatedSnippets)
-    #print(relatedSnippetLabels)
+    relatedSnippets = clean(relatedSnippets, stopWords)
 
-'''
-stopWords read from file
-handled by NER
-'january','february','march','april','june','july','august','september','october','november','defnamecember',
+    if not os.path.isfile(relatedSnippetsPath):
+        with open(relatedSnippetsPath, 'w') as f:
+            for item in relatedSnippets:
+                f.write(item + '\n')
+    if not os.path.isfile(relatedSnippetLabelsPath + '.npy'):
+        np.save(relatedSnippetLabelsPath, np.array(relatedSnippetLabels))
 
-too harsh
-"every", "never", "whenever", "wherever", "whatever", "whoever", "anyhow", "anyway", "anywhere", "any", "always"
-
-neg
-'no', 'not'
-'''
-stopWords = []
-with open('../../Data/stopword.txt') as f:
-    stopWords = f.readlines()
-    stopWords = [x.strip() for x in stopWords] 
-
-relatedSnippets = clean(relatedSnippets, stopWords)
-
-if not os.path.isfile(relatedSnippetsPath):
-    with open(relatedSnippetsPath, 'w') as f:
-        for item in relatedSnippets:
-            f.write(item + '\n')
-if not os.path.isfile(relatedSnippetLabelsPath + '.npy'):
-    np.save(relatedSnippetLabelsPath, np.array(relatedSnippetLabels))
-
-
+if __name__ == '__main__':
+    main()
 
 
 
