@@ -11,7 +11,8 @@ class Classifier(object):
 		self.y = y
 		self.logPath = logPath
 		self.experimentPath = experimentPath
-		self.rf = self._initRF(task)
+		self.task = task
+		self.rf = self._initRF()
 		self._printClass()
 
 	def _printClass(self):
@@ -25,12 +26,12 @@ class Classifier(object):
 		logFile.write('%i, %i \n' %(nunSample, numFeature))
 		logFile.close()
 
-	def _initRF(self, task):
-		if os.path.isfile(self.experimentPath + task + 'rf.pkl'):
+	def _initRF(self):
+		if os.path.isfile(self.experimentPath + self.task + 'rf.pkl'):
 			from sklearn.externals import joblib
-			return joblib.load(self.experimentPath + task + 'rf.pkl')
+			return joblib.load(self.experimentPath + self.task + 'rf.pkl')
 		else:
-			if task == 'stance':
+			if self.task == 'stance':
 				return RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2, n_estimators=3000, max_depth=80)
 			else:
 				return RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2)
@@ -86,7 +87,14 @@ class Classifier(object):
 		logFile.close()
 
 
-	def predict_porb(n_fold=5):
+	def predict_porb(self):
+		# rf has been refitted to the entire dataset after CV
+		y_pred_prob = self.rf.predict_log_proba(self.X)
+		np.save(self.experimentPath+task+'/stance_prob', y_pred_prob)
+		# [n_samples, n_classes]
+		return y_pred_prob
+
+		'''
 		from sklearn.model_selection import KFold
 		kf = KFold(n_splits=n_fold)
 		y_pred_prob = np,zeros(self.X.shape[1])
@@ -97,9 +105,28 @@ class Classifier(object):
 		y_pred_prob /= n_fold
 		np.save(self.experimentPath+'', y_pred_prob)
 		return y_pred_prob
+		'''
+	'''
+	def weightedCrossValidate(sourceCredn_fold=5):
+		logFile = open(self.logPath, 'w')
+		from sklearn.model_selection import GridSearchCV
+		grid = dict(max_depth=[80, 90, 100])
+		# grid = dict(n_estimators=[500], max_depth=[2000])
+		rfGS = GridSearchCV(estimator=self.rf, param_grid=grid, cv=n_fold, n_jobs=2)
+		rfGS.fit(self.X, self.y)
 
-
-	def predict(origDataPath=None):
+		means = rfGS.cv_results_['mean_test_score']
+		stds = rfGS.cv_results_['std_test_score']
+		for mean, std, params in zip(means, stds, rfGS.cv_results_['params']):
+			print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
+			logFile.write("%0.3f (+/-%0.03f) for %r \n" % (mean, std * 2, params))
+		self.rf = rfGS.best_estimator_
+		from sklearn.externals import joblib
+		joblib.dump(rfGS.best_estimator_, self.experimentPath + 'rf.pkl')
+		logFile.close()
+	'''
+	
+	def predict(self, origDataPath=None):
 		# print(rfGS.best_params_)
 		from sklearn.model_selection import train_test_split
 		X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.2)
