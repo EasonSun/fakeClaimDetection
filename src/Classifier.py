@@ -31,7 +31,7 @@ class Classifier(object):
 			return joblib.load(self.experimentPath + task + 'rf.pkl')
 		else:
 			if task == 'stance':
-				return RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2, n_estimators=1000, max_depth=30)
+				return RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2, n_estimators=3000, max_depth=80)
 			else:
 				return RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2)
 

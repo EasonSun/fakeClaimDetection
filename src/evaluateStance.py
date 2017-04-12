@@ -10,13 +10,13 @@ experimentPath = sys.argv[1]
 claimPath = experimentPath + 'claims.txt'
 articlePath = experimentPath + 'articles.txt'
 stancePath = experimentPath + 'stance.npy'
-relatedSnippetsPath = experimentPath + 'relatedSnippets.txt'
-relatedSnippetLabelsPath = experimentPath + 'relatedSnippetLabels.npy'
+relatedSnippetsPath = experimentPath + 'stance/relatedSnippets.txt'
+relatedSnippetLabelsPath = experimentPath + 'stance/relatedSnippetLabels.npy'
 
-relatedSnippetXPath = experimentPath + 'relatedSnippetX'
-relatedSnippet_yPath = experimentPath + 'relatedSnippet_y'
-featureNamePath = experimentPath + 'featureName'
-wrongPredicitonPath = experimentPath + 'wrongPrediciton.txt'
+relatedSnippetXPath = experimentPath + 'stance/relatedSnippetX'
+relatedSnippet_yPath = experimentPath + 'stance/relatedSnippet_y'
+featureNamePath = experimentPath + 'stance/featureName'
+wrongPredicitonPath = experimentPath + 'stance/wrongPrediciton.txt'
 logPath = experimentPath + 'log.txt'
 
 MIN_DF = float(sys.argv[2])
@@ -70,7 +70,7 @@ def main():
 	print("MIN_DF = %f" %MIN_DF)
 	print("MAX_DF = %f" %MAX_DF)
 
-	logFile = open(logPath, 'w')
+	logFile = open(logPath, 'a')
 	logFile.write ('ratio of imbalance, neg : pos is  %4f \n' %ratioImbalance)
 	logFile.write("MIN_DF = %f \n" %MIN_DF)
 	logFile.write("MAX_DF = %f \n" %MAX_DF)

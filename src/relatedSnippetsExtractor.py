@@ -28,6 +28,7 @@ class relatedSnippetsExtractor(object):
             self.stopWords = [x.strip() for x in self.stopWords] 
         print ("overlapThreshold = %f" %self.overlapThreshold)
 
+
     def extract(self, claim, article, label=None):
         from sklearn.feature_extraction.text import CountVectorizer
         # empty string can be taken as all 0 vectors
@@ -116,7 +117,6 @@ class relatedSnippetsExtractor(object):
         return relatedSnippets, relatedSnippetLabels
         #print(relatedSnippets)
         #print(relatedSnippetLabels)
-
 
 
     def _extractSnippets(self, article):
