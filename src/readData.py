@@ -16,7 +16,7 @@ def main():
 	articlePath = experimentPath + 'articles.txt'
 	stancePath = experimentPath + 'stance'
 	credPath = experimentPath + 'cred'
-
+	
 	if os.path.isfile(claimPath):
 		return
 
@@ -43,9 +43,9 @@ def main():
 				stanceList.append(1) # against
 
 		if item['Credibility'] in ['true', 'mostly true']: 
-				credList.append(0)	# for
-			elif item['Credibility'] in ['false', 'mostly false']: 
-				credList.append(1) # against
+			credList.append(0)	# for
+		elif item['Credibility'] in ['false', 'mostly false']: 
+			credList.append(1) # against
 
 
 	claimFile.close()

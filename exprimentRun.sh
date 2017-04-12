@@ -1,11 +1,9 @@
 #!/bin/bash
 dataPath="data/Snopes"
 lgFeaturesPath="data/linguisticFeatures/"
-stopwordsPath="data/stopword.txt"
 resultPath="results/"
 srcPath="src/"
 experimentPath="results/experiment_$1/"
-experimentLogPath="$experimentPath_log"
 txt="txt"
 ### experimentLogPath="$experimentLogPath.$txt"	###??? doesn't work?
 
@@ -23,8 +21,6 @@ MAX_DF=".5"
 echo overlapThreshold >> experimentLogPath
 ### read data
 python3 src/readData.py $dataPath $experimentPath
-### extract related snippets
-python3 src/extractRelatedSnippets.py $experimentPath $overlapThreshold $stopwordsPath
 ### evaluate stance classifier
-python3 src/evaluateStance.py $experimentPath $MIN_DF $MAX_DF $experimentLogPath
+python3 src/evaluateStance.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold
 ### evaluate claim credibility
