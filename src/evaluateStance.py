@@ -5,6 +5,8 @@ import sys
 import time
 from Classifier import Classifier
 from relatedSnippetsExtractor import relatedSnippetsExtractor
+from lgExtractor import lgExtractor
+
 
 experimentPath = sys.argv[1]
 claimPath = experimentPath + 'claims.txt'
@@ -22,6 +24,9 @@ logPath = experimentPath + 'log.txt'
 MIN_DF = float(sys.argv[2])
 MAX_DF = float(sys.argv[3])
 overlapThreshold = float(sys.argv[4])
+
+lgPath = "data/linguisticFeatures/allFeatures.txt"
+
 	
 def main():
 	print ('start stance evaluation ...')
@@ -36,6 +41,14 @@ def main():
 	articles = [x.strip() for x in articles]
 	articleLabels = np.load(stancePath)
 
+	lgFeatures = {}
+	nextValue = 0
+	with open(lgPath) as f:
+		for lgFeature in f:
+			lgFeature = lgFeature.rstrip()
+			if lgFeature not in lgFeatures:
+				lgFeatures[lgFeature] = nextValue
+				nextValue += 1
 
 	relatedSnippets = []
 	relatedSnippetLabels = []
@@ -64,7 +77,7 @@ def main():
 		relatedSnippets = [x.strip() for x in relatedSnippets]
 		relatedSnippetLabels = np.load(relatedSnippetLabelsPath)
 		#the above line does not make sense?
-
+	print ('finish related snippets extraction')
 	ratioImbalance = np.sum(relatedSnippetLabels) / (relatedSnippetLabels.shape - np.sum(relatedSnippetLabels))
 	print ('ratio of imbalance, neg : pos is %4f' %ratioImbalance)
 	print("MIN_DF = %f" %MIN_DF)
@@ -82,11 +95,19 @@ def main():
 	featureNames = []
 
 	if not os.path.isfile(relatedSnippetXPath+'.npy'):
+		'''
 		relatedSnippetX, featureNames = extractor.extractFeatures(relatedSnippets, MIN_DF, MAX_DF)
 		relatedSnippet_y = np.array(relatedSnippetLabels)
 		np.save(relatedSnippetXPath, relatedSnippetX)
 		np.save(relatedSnippet_yPath, relatedSnippet_y)
 		np.save(featureNamePath, np.array(featureNames))
+		'''
+		LGExtractor = lgExtractor(lgFeatures)
+		relatedSnippetX, featureNames = LGExtractor.extract(relatedSnippets)
+		relatedSnippet_y = np.array(relatedSnippetLabels)
+		np.save(relatedSnippetXPath, relatedSnippetX)
+		np.save(relatedSnippet_yPath, relatedSnippet_y)
+		np.save(featureNamePath, featureNames)
 
 	else:
 		try:
@@ -101,12 +122,11 @@ def main():
 
 	print ('start classifying')
 	clf = Classifier(relatedSnippetX, 'stance', logPath, experimentPath, relatedSnippet_y)
-	clf.evaluateFeatureImportance(featureNames)
-	'''
-	if os.path.isfile(topFeaturesPath):
-		return
-	'''
-	clf.paramSearch()
+	
+	clf.evaluateFeatureImportance(featureNames, max_depth=30)
+	# clf.paramSearch()
+	clf.crossValidate(max_depth=300, n_fold=10)
+	# clf.crossValidate(max_depth=80)
 	'''
 	RESULTS
 	0.757 (+/-0.019) for {'max_depth': 2000, 'n_estimators': 500}

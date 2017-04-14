@@ -160,7 +160,7 @@ def main():
 	# (cv, numClaim, numClass)
 	credClf.crossValidate(sourceCredByStance)
 
- 	credClf.crossValidate(sourceCredByStance, claimArticleIdx)
+	credClf.crossValidate(sourceCredByStance, claimArticleIdx)
 
 	logFile.close()
 

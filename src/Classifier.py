@@ -11,35 +11,32 @@ class Classifier(object):
 		self.y = y
 		self.logPath = logPath
 		self.experimentPath = experimentPath
-		self.task = task
+		self.task = task+'/'
 		self.rf = self._initRF()
 		self._printClass()
 
 	def _printClass(self):
 		nunSample, numFeature = self.X.shape	
-		print("nunSample, numFeature: ")
-		print (nunSample, numFeature)
-
-		logFile = open(self.logPath, 'w')
-		logFile.write("X dim and y dim: \n")
-		nunSample, numFeature = self.X.shape	
-		logFile.write('%i, %i \n' %(nunSample, numFeature))
+		print("nunSample, numFeature: %i, %i" %(nunSample, numFeature))
+		logFile = open(self.logPath, 'a')
+		logFile.write("nunSample, numFeature: %i, %i\n" %(nunSample, numFeature))
 		logFile.close()
 
 	def _initRF(self):
-		if os.path.isfile(self.experimentPath + self.task + 'rf.pkl'):
+		if os.path.isfile(self.experimentPath+self.task+'rf.pkl'):
 			from sklearn.externals import joblib
-			return joblib.load(self.experimentPath + self.task + 'rf.pkl')
+			return joblib.load(self.experimentPath+self.task+'rf.pkl')
 		else:
 			if self.task == 'stance':
-				return RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2, n_estimators=3000, max_depth=80)
+				return RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2, n_estimators=2000, max_depth=80)
 			else:
 				return RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2)
 
-	def evaluateFeatureImportance(self, featureNames, n_fold=5):
-		importancesPath = self.experimentPath + 'importances'
-		topFeaturesPath = self.experimentPath + 'topFeatures.txt'
-
+	def evaluateFeatureImportance(self, featureNames, n_fold=5, max_depth=None):
+		importancesPath = self.experimentPath+self.task+'importances'
+		topFeaturesPath = self.experimentPath+self.task+'topFeatures.txt'
+		if max_depth is not None:
+			self.rf.max_depth = max_depth
 		importances = np.zeros(self.X.shape[1])
 		# importancesPerClass = np.zeros((numFeature, 2))
 		from sklearn.model_selection import KFold
@@ -67,9 +64,11 @@ class Classifier(object):
 
 
 	def paramSearch(self, n_fold=5, sampleWeight=None):
-		logFile = open(self.logPath, 'w')
+		logFile = open(self.logPath, 'a')
+		print ('Start searching best parameters ...')
+		logFile.write('Start searching best parameters ... \n')
 		from sklearn.model_selection import GridSearchCV
-		grid = dict(max_depth=[80, 90, 100])
+		grid = dict(max_depth=[300, 350])
 		# grid = dict(n_estimators=[500], max_depth=[2000])
 		rfGS = GridSearchCV(estimator=self.rf, param_grid=grid, cv=n_fold, n_jobs=2)
 		if (sampleWeight is not None):
@@ -83,42 +82,55 @@ class Classifier(object):
 			logFile.write("%0.3f (+/-%0.03f) for %r \n" % (mean, std * 2, params))
 		self.rf = rfGS.best_estimator_
 		from sklearn.externals import joblib
-		joblib.dump(rfGS.best_estimator_, self.experimentPath + 'rf.pkl')
+		joblib.dump(rfGS.best_estimator_, self.experimentPath+self.task+'rf.pkl')
 		logFile.close()
 		# sample_weight at fit is to deal with class imbalance
 
 	# this is the real cross validation, after got the best params
+	# X: (numArticle, numClass), y: (numArticle)
 	# sourceCredByStance is source cred by stance (numArticle, numClass)
-	def crossValidate(self, n_fold=5, sourceCredByStance=None, claimArticleIdx=None):
+	# y_pred_prob: (numArticle, numClass)
+	# if claimArticleIdx is not None, then calculate per claim y_pred
+
+
+	def crossValidate(self, n_fold=5, sourceCredByStance=None, claimArticleIdx=None, max_depth=None):
 		logFile = open(self.logPath, 'a')
+
 		if (claimArticleIdx is None):
 			logFile.write('Per article evaluation\n')
 		else:
 			logFile.write('Per claim evaluation\n')
+
+		if max_depth is not None:
+			self.rf.max_depth = max_depth
+
 		from sklearn.metrics import classification_report
+		from sklearn.metrics import accuracy_score
 		from sklearn.model_selection import KFold
 		kf = KFold(n_splits=n_fold)
 		for train_index, test_index in kf.split(self.X):
-			# print("TRAIN:", train_index, "TEST:", test_index)
 			X_train, X_test = self.X[train_index], self.X[test_index]
 			y_train, y_test = self.y[train_index], self.y[test_index]
 			self.rf.fit(X_train, y_train)
 			y_pred_prob = self.rf.predict_log_proba(X_test)
-			sourceCred = sourceCredByStance[test_index]
-			assert(y_pred_prob.shape == sourceCred.shape)
-			y_pred_prob = np.multiply(y_pred_prob, sourceCred)
-			if (claimArticleIdx is not None):
-				_, idx, counts = np.unique(claimArticleIdx, return_inverse=True, return_counts=True)
-				for i in range(sourceCred.shape[1]):
-					y_pred_prob[i,:] = np.bincount(idx, weights=y_pred_prob[:,i]) / counts
-				y_test = np.bincount(idx) / counts
+			if sourceCredByStance is not None:
+				sourceCred = sourceCredByStance[test_index]
+				assert(y_pred_prob.shape == sourceCred.shape)
+				y_pred_prob = np.multiply(y_pred_prob, sourceCred)
+				if (claimArticleIdx is not None):
+					# make it per claim, group by article
+					_, idx, counts = np.unique(claimArticleIdx, return_inverse=True, return_counts=True)
+					for i in range(sourceCred.shape[1]):
+						y_pred_prob[i,:] = np.bincount(idx, weights=y_pred_prob[:,i]) / counts
+					y_test = np.bincount(idx) / counts
 			y_pred = np.argmax(y_pred_prob, axis=1)
 			assert(y_pred.shape == y_test.shape)
 			result = classification_report(y_test, y_pred, target_names=['true', 'fake'])
+			accuracy = accuracy_score(y_test, y_pred)
+			print(accuracy)
+			logFile.write(str(accuracy)+'\n')
 			print(result)
 			logFile.write(result+'\n')
-
-
 		logFile.close()
 
 
@@ -176,7 +188,7 @@ class Classifier(object):
 		from sklearn.metrics import classification_report
 		result = classification_report(y_test, y_pred, target_names=['true', 'fake'])
 		print(result)
-		logFile = open(self.logPath, 'w')
+		logFile = open(self.logPath, 'a')
 		logFile.write(result)
 		logFile.close()
 
