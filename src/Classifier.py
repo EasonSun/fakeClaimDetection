@@ -45,7 +45,6 @@ class Classifier(object):
 		from sklearn.model_selection import KFold
 		kf = KFold(n_splits=n_fold)
 		if not os.path.isfile(importancesPath+'.npy'):
-			#or not os.path.isfile('importancesPerClass.npy'):
 			for train_index, test_index in kf.split(self.X):
 				# print("TRAIN:", train_index, "TEST:", test_index)
 				X_train, X_test = self.X[train_index], self.X[test_index]
@@ -55,7 +54,6 @@ class Classifier(object):
 
 			importances /= n_fold
 			np.save(importancesPath, np.array(importances))	#should not change with param?
-
 		else:
 			importances = np.load(importancesPath+'.npy')
 			# importancesPerClass = np.load('importancesPerClass.npy')
@@ -68,12 +66,14 @@ class Classifier(object):
 		topFeatureFile.close()
 
 
-	def crossValidate(self, n_fold=5):
+	def paramSearch(self, n_fold=5, sampleWeight=None):
 		logFile = open(self.logPath, 'w')
 		from sklearn.model_selection import GridSearchCV
 		grid = dict(max_depth=[80, 90, 100])
 		# grid = dict(n_estimators=[500], max_depth=[2000])
 		rfGS = GridSearchCV(estimator=self.rf, param_grid=grid, cv=n_fold, n_jobs=2)
+		if (sampleWeight is not None):
+			rfGS.fit_params={'sample_weight': sampleWeight}
 		rfGS.fit(self.X, self.y)
 
 		means = rfGS.cv_results_['mean_test_score']
@@ -85,13 +85,53 @@ class Classifier(object):
 		from sklearn.externals import joblib
 		joblib.dump(rfGS.best_estimator_, self.experimentPath + 'rf.pkl')
 		logFile.close()
+		# sample_weight at fit is to deal with class imbalance
+
+	# this is the real cross validation, after got the best params
+	# sourceCredByStance is source cred by stance (numArticle, numClass)
+	def crossValidate(self, n_fold=5, sourceCredByStance=None, claimArticleIdx=None):
+		logFile = open(self.logPath, 'a')
+		if (claimArticleIdx is None):
+			logFile.write('Per article evaluation\n')
+		else:
+			logFile.write('Per claim evaluation\n')
+		from sklearn.metrics import classification_report
+		from sklearn.model_selection import KFold
+		kf = KFold(n_splits=n_fold)
+		for train_index, test_index in kf.split(self.X):
+			# print("TRAIN:", train_index, "TEST:", test_index)
+			X_train, X_test = self.X[train_index], self.X[test_index]
+			y_train, y_test = self.y[train_index], self.y[test_index]
+			self.rf.fit(X_train, y_train)
+			y_pred_prob = self.rf.predict_log_proba(X_test)
+			sourceCred = sourceCredByStance[test_index]
+			assert(y_pred_prob.shape == sourceCred.shape)
+			y_pred_prob = np.multiply(y_pred_prob, sourceCred)
+			if (claimArticleIdx is not None):
+				_, idx, counts = np.unique(claimArticleIdx, return_inverse=True, return_counts=True)
+				for i in range(sourceCred.shape[1]):
+					y_pred_prob[i,:] = np.bincount(idx, weights=y_pred_prob[:,i]) / counts
+				y_test = np.bincount(idx) / counts
+			y_pred = np.argmax(y_pred_prob, axis=1)
+			assert(y_pred.shape == y_test.shape)
+			result = classification_report(y_test, y_pred, target_names=['true', 'fake'])
+			print(result)
+			logFile.write(result+'\n')
 
 
-	def predict_porb(self):
-		# rf has been refitted to the entire dataset after CV
-		y_pred_prob = self.rf.predict_log_proba(self.X)
-		np.save(self.experimentPath+task+'/stance_prob', y_pred_prob)
-		# [n_samples, n_classes]
+		logFile.close()
+
+
+	# [n_samples, n_classes]
+	def predict_porb(self, X=None):
+		y_pred_prob = np.zeros(0)
+		if (X == None):
+			# rf has been refitted to the entire dataset after CV
+			y_pred_prob = self.rf.predict_log_proba(self.X)
+		else:
+			y_pred_prob = self.rf.predict_log_proba(X)
+		# np.save(self.experimentPath+task+'/stance_prob', y_pred_prob)
+		
 		return y_pred_prob
 
 		'''
@@ -107,7 +147,7 @@ class Classifier(object):
 		return y_pred_prob
 		'''
 	'''
-	def weightedCrossValidate(sourceCredn_fold=5):
+	def weightedparamSearch(sourceCredn_fold=5):
 		logFile = open(self.logPath, 'w')
 		from sklearn.model_selection import GridSearchCV
 		grid = dict(max_depth=[80, 90, 100])
@@ -125,7 +165,7 @@ class Classifier(object):
 		joblib.dump(rfGS.best_estimator_, self.experimentPath + 'rf.pkl')
 		logFile.close()
 	'''
-	
+
 	def predict(self, origDataPath=None):
 		# print(rfGS.best_params_)
 		from sklearn.model_selection import train_test_split
@@ -165,4 +205,12 @@ class Classifier(object):
 	[Parallel(n_jobs=2)]: Done 1246 tasks      | elapsed:  7.9min
 	[Parallel(n_jobs=2)]: Done 1796 tasks      | elapsed: 10.9min
 	[Parallel(n_jobs=2)]: Done 2000 out of 2000 | elapsed: 11.8min finished
+	'''
+
+
+	'''
+	http://scikit-learn.org/stable/modules/generated/sklearn.metrics.accuracy_score.html
+	This is how sklearn rf does scoring / loss function
+	We can customize this if we use cred as some sort of weights
+	but this will be used also in the training phase.
 	'''

@@ -1,6 +1,7 @@
 #!/bin/bash
 dataPath="data/Snopes"
-lgFeaturesPath="data/linguisticFeatures/"
+lgPath = "data/linguisticFeatures/allFeatures.txt"
+articlePath="data/articles.json"
 resultPath="results/"
 srcPath="src/"
 experimentPath="results/experiment_$1/"
@@ -24,4 +25,4 @@ python3 src/readData.py $dataPath $experimentPath
 ### evaluate stance classifier
 ### python3 src/evaluateStance.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold
 ### evaluate claim credibility
-python3 src/evaluateClaim.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold
+python3 src/evaluateClaim.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold $lgPath $articlePath

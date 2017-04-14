@@ -106,7 +106,7 @@ def main():
 	if os.path.isfile(topFeaturesPath):
 		return
 	'''
-	clf.crossValidate()
+	clf.paramSearch()
 	'''
 	RESULTS
 	0.757 (+/-0.019) for {'max_depth': 2000, 'n_estimators': 500}
