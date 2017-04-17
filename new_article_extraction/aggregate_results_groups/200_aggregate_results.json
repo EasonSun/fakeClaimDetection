@@ -1,0 +1,77 @@
+[
+  {
+    "claim": "Image shows a fourth-grade science quiz about 'Dinosaurs: Genesis and the Gospel' from a South Carolina school.", 
+    "urls": [], 
+    "claim_file": "photos_signs_sciencetest.json"
+  }, 
+  {
+    "claim": "Letter from high school offers to allow students to make monetary donations to offset inatttendance and poor grades.", 
+    "urls": [], 
+    "claim_file": "photos_signs_stevenson.json"
+  }, 
+  {
+    "claim": "Billboard sponsored by the Funeral Directors Association urges viewers to commit suicide.", 
+    "urls": [], 
+    "claim_file": "photos_signs_suicide.json"
+  }, 
+  {
+    "claim": "The University of Toronto is conducting a study regarding the effects of semen on human speech and is paying male volunteers $145 each to receive fellatio.", 
+    "urls": [], 
+    "claim_file": "photos_signs_toronto.json"
+  }, 
+  {
+    "claim": "Photograph shows bulletin warning London Underground travelers not to run on the platforms or concourses.", 
+    "urls": [], 
+    "claim_file": "photos_signs_tubesign.json"
+  }, 
+  {
+    "claim": "A \"Welcome to Idaho\" sign warns potential criminals about gun-owning citizens.", 
+    "urls": [], 
+    "claim_file": "photos_signs_welcometoidaho.json"
+  }, 
+  {
+    "claim": "Photograph shows a Westboro Baptist Church sign reading 'Ted Cruz Is Our Hero.'\"", 
+    "urls": [], 
+    "claim_file": "photos_signs_westborocruz.json"
+  }, 
+  {
+    "claim": "Photograph shows a satellite view of a blackout in eastern North America.", 
+    "urls": [], 
+    "claim_file": "photos_space_blackout.json"
+  }, 
+  {
+    "claim": "Photographs show the explosive destruction of the Space Shuttle Columbia .", 
+    "urls": [], 
+    "claim_file": "photos_space_explosion.json"
+  }, 
+  {
+    "claim": "Photograph taken during fatal Columbia mission reveals large cracks in the shuttle's wing.", 
+    "urls": [], 
+    "claim_file": "photos_space_shuttlewing.json"
+  }, 
+  {
+    "claim": "Image shows a photograph of a solar eclipse taken from space.", 
+    "urls": [], 
+    "claim_file": "photos_space_solareclipse.json"
+  }, 
+  {
+    "claim": "Photograph shows a view of a solar eclipse taken from the International Space Station.", 
+    "urls": [], 
+    "claim_file": "photos_space_solareclipse2015.json"
+  }, 
+  {
+    "claim": "Photograph taken from the Space Shuttle Columbia shows sunset over Europe and Africa.", 
+    "urls": [], 
+    "claim_file": "photos_space_sunset.json"
+  }, 
+  {
+    "claim": "Photograph shows a \"super moon\" over California's Sequoia National Park.", 
+    "urls": [], 
+    "claim_file": "photos_space_supermoon.json"
+  }, 
+  {
+    "claim": "Video captures a ball girl making an outstanding catch at a major league baseball game.", 
+    "urls": [], 
+    "claim_file": "photos_sports_ballgirl.json"
+  }
+]

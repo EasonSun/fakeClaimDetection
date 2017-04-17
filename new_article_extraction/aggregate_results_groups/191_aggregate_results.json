@@ -1,0 +1,120 @@
+[
+  {
+    "claim": "Photographs show foam that blanketed an Australian shoreline.", 
+    "urls": [], 
+    "claim_file": "photos_natural_seafoam.json"
+  }, 
+  {
+    "claim": "Photographs show a collection of snowrollers formed in Idaho.", 
+    "urls": [], 
+    "claim_file": "photos_natural_snowrollers.json"
+  }, 
+  {
+    "claim": "Photographs show Hurricane Katrina hitting the Gulf Coast in August 2005.", 
+    "urls": [], 
+    "claim_file": "photos_natural_storm.json"
+  }, 
+  {
+    "claim": "Photograph shows a tornado striking the coastal city of New Plymouth in New Zealand.", 
+    "urls": [
+      "http://www.metservice.com/towns-cities/new-plymouth", 
+      "https://en.wikipedia.org/wiki/List_of_Southern_Hemisphere_tornadoes_and_tornado_outbreaks", 
+      "https://www.niwa.co.nz/natural-hazards/faq/tornadoes-in-new-zealand-faqs", 
+      "https://www.weatherwatch.co.nz/weather-forecasts/auckland", 
+      "http://www.dailymail.co.uk/news/article-3756203/Shocking-pictures-Italian-towns-completely-destroyed-devastating-earthquake.html", 
+      "http://www.nzherald.co.nz/weather/news/headlines.cfm?c_id=10", 
+      "https://www.pinterest.com/pin/545146729877240126/", 
+      "https://weather.com/storms/winter/news/snow-south-winter-storm-helena", 
+      "https://eros.usgs.gov/imagegallery/image-week", 
+      "https://www.tvnz.co.nz/one-news", 
+      "http://www.newsnow.co.uk/h/Current+Affairs/Severe+Weather+Events", 
+      "https://www.sott.net/article/223336-Cyclones-Earthquakes-Volcanoes-And-Other-Electrical-Phenomena", 
+      "http://fox13now.com/category/news/", 
+      "https://www.youtube.com/channel/UCOaMIPk5GtosYNi32liVbRg", 
+      "http://www.wcax.com/weather", 
+      "https://www.msn.com/en-us/weather", 
+      "http://memoirsonthemove.com/", 
+      "http://freepages.genealogy.rootsweb.ancestry.com/~nzbound/lines.htm", 
+      "https://www.sunshinecoastdaily.com.au/", 
+      "http://www.wftv.com/video?videoId=98786085&videoVersion=1.0"
+    ], 
+    "claim_file": "photos_natural_taranaki.json"
+  }, 
+  {
+    "claim": "Photographs show a townhouse filled 70,000 discarded beer cans and boxes.", 
+    "urls": [], 
+    "claim_file": "photos_odd_beercans.json"
+  }, 
+  {
+    "claim": "Former Lockheed Martin engineer Boyd Bushman provided evidence of human contact with alien life before his death in August 2014.", 
+    "urls": [
+      "https://www.pinterest.com/pin/9077636726505492/", 
+      "http://www.theblackvault.com/documentarchive/fbi-files-the-paranormal-collection/", 
+      "http://galacticconnection.com/category/science/", 
+      "https://www.pinterest.com/explore/area-51-videos/", 
+      "http://noliesradio.org/archives/91079", 
+      "https://www.pinterest.com/cavalierkingch/aliens-ufos/", 
+      "http://badufos.blogspot.com/2014/10/scientist-photographs-plastic-alien-at.html", 
+      "https://lamarzulli.wordpress.com/2014/10/31/isil-atrocities-continue-unabated/", 
+      "http://www.digitaljournal.com/news/odd+news/video-lockheed-martin-area-51-scientist-confesses-ufos-aliens/article/411959", 
+      "http://www.libertynewsonline.com/ressort_129.php"
+    ], 
+    "claim_file": "photos_odd_bushman.json"
+  }, 
+  {
+    "claim": "A Dollar Store princess wand called the \"Evilstick\" has a hidden image of a \"demonic\" girl cutting her wrists.", 
+    "urls": [], 
+    "claim_file": "photos_odd_evilstick.json"
+  }, 
+  {
+    "claim": "The skeleton of a giant human was uncovered during gas exploration in Saudi Arabia.", 
+    "urls": [], 
+    "claim_file": "photos_odd_giantman.json"
+  }, 
+  {
+    "claim": "Photograph shows giant humanoid skulls discovered after an earthquake in South America.", 
+    "urls": [], 
+    "claim_file": "photos_odd_giantskulls.json"
+  }, 
+  {
+    "claim": "Video captures a 'creepy gnome' that has frightened residents of an Argentine town.", 
+    "urls": [], 
+    "claim_file": "photos_odd_gnome.json"
+  }, 
+  {
+    "claim": "Video clip shows UFOs over Haiti.", 
+    "urls": [], 
+    "claim_file": "photos_odd_haitiufos.json"
+  }, 
+  {
+    "claim": "Photograph shows an Arizona man who keeps his dead wife's corpse in a glass-enclosed coffee table.", 
+    "urls": [], 
+    "claim_file": "photos_odd_lucy.json"
+  }, 
+  {
+    "claim": "Photographs show the discovery of mermaid-like sea creature.", 
+    "urls": [], 
+    "claim_file": "photos_odd_mermaid.json"
+  }, 
+  {
+    "claim": "Photograph purportedly shows Ronald McDonald being carried off by two police officers.", 
+    "urls": [
+      "http://heavy.com/", 
+      "http://www.breitbart.com/big-government/", 
+      "http://wbintv.com/nh1-news", 
+      "http://www.app.com/", 
+      "http://www.newnation.org/", 
+      "http://www.thepowerhour.com/news.htm", 
+      "https://www.ptd.net/news/us-news", 
+      "https://www.yahoo.com/news/venezuela-drug-lord-changed-look-surgeries-211652820.html", 
+      "http://blog.tsa.gov/2009/03/can-i-take-photos-at-checkpoint-and.html", 
+      "https://www.pinterest.com/andrewblodgett/photo-powerful-images/"
+    ], 
+    "claim_file": "photos_odd_ronald.json"
+  }, 
+  {
+    "claim": "The Sears web site briefly offered a \"body part roaster\" grill for cooking babies.", 
+    "urls": [], 
+    "claim_file": "photos_odd_searsgrill.json"
+  }
+]

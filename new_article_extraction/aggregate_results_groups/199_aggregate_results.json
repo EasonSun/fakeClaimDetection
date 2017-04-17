@@ -1,0 +1,77 @@
+[
+  {
+    "claim": "Photographs show an 1890 gravestone with an anti-Democratic epitaph.", 
+    "urls": [], 
+    "claim_file": "photos_signs_grigsby.json"
+  }, 
+  {
+    "claim": "Photograph shows a store advertising \"Delicious for Chanukah\" hams.", 
+    "urls": [], 
+    "claim_file": "photos_signs_hanukkah.json"
+  }, 
+  {
+    "claim": "Epitaph on headstone in Montreal cemetery forms an unflattering acrostic.", 
+    "urls": [], 
+    "claim_file": "photos_signs_headstone.json"
+  }, 
+  {
+    "claim": "Hooters has banned motorcyclists from wearing club patches and colors in all of their locations.", 
+    "urls": [], 
+    "claim_file": "photos_signs_hootersmotorcycles.json"
+  }, 
+  {
+    "claim": "Photograph shows a sign bearing an ominous threat from the group \"Advancement of Islamic Agenda for America.\"", 
+    "urls": [], 
+    "claim_file": "photos_signs_islamicagenda.json"
+  }, 
+  {
+    "claim": "Image shows a McDonald's sign announcing a $1.50 surcharge on African-American customers.", 
+    "urls": [], 
+    "claim_file": "photos_signs_mcdinsurance.json"
+  }, 
+  {
+    "claim": "Photograph shows an advisory sign explaining priority seating for Japanese metro train passengers.", 
+    "urls": [], 
+    "claim_file": "photos_signs_metro.json"
+  }, 
+  {
+    "claim": "News report shows Martin Luther King Day celebrants holding misspelled signs.", 
+    "urls": [], 
+    "claim_file": "photos_signs_mlkday.json"
+  }, 
+  {
+    "claim": "A plaque made for a 2002 Martin Luther King Day celebration mistakenly thanked James Earl Ray, King's assassin.", 
+    "urls": [], 
+    "claim_file": "photos_signs_mlkplaque.json"
+  }, 
+  {
+    "claim": "Photograph shows the gravestone of actor Leslie Nielsen.", 
+    "urls": [], 
+    "claim_file": "photos_signs_nielsen.json"
+  }, 
+  {
+    "claim": "Photograph shows playground warning sign with more restrictive wording in Spanish than in English.", 
+    "urls": [], 
+    "claim_file": "photos_signs_playground.json"
+  }, 
+  {
+    "claim": "Newspaper photograph shows a pregnant, cigarette-smoking woman worrying about the effect of construction noise on her unborn child.", 
+    "urls": [], 
+    "claim_file": "photos_signs_pregnant.json"
+  }, 
+  {
+    "claim": "Photograph shows a grocery receipt for steak and lobster purchased with food stamps.", 
+    "urls": [], 
+    "claim_file": "photos_signs_receipt.json"
+  }, 
+  {
+    "claim": "A 1972 sign warned Irish motorists not to drive after having five pints of beer.", 
+    "urls": [], 
+    "claim_file": "photos_signs_responsibledrinking.json"
+  }, 
+  {
+    "claim": "A Rite Aid store posted a sign prohibiting \"same-sex activity.\"", 
+    "urls": [], 
+    "claim_file": "photos_signs_riteaid.json"
+  }
+]

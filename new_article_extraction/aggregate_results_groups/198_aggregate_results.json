@@ -1,0 +1,77 @@
+[
+  {
+    "claim": "Photograph shows a 419.99 mile-marker sign along I-70 in Colorado.", 
+    "urls": [], 
+    "claim_file": "photos_signs_419.json"
+  }, 
+  {
+    "claim": "A sign welcoming visitors to Amsterdam instructs obese people to keep their clothes on.", 
+    "urls": [], 
+    "claim_file": "photos_signs_amsterdam.json"
+  }, 
+  {
+    "claim": "Photograph shows Arizona billboard poking fun at Los Angeles' decision to boycott that state over illegal immigrant legislation.", 
+    "urls": [], 
+    "claim_file": "photos_signs_arizona.json"
+  }, 
+  {
+    "claim": "Austria is home to a town called 'Fucking.'", 
+    "urls": [], 
+    "claim_file": "photos_signs_austria.json"
+  }, 
+  {
+    "claim": "Photograph shows third-world protesters with mistranslated English signs.", 
+    "urls": [], 
+    "claim_file": "photos_signs_bombus.json"
+  }, 
+  {
+    "claim": "Photograph shows an ATM sign which warns users that making faces into a security camera is a federal crime.", 
+    "urls": [], 
+    "claim_file": "photos_signs_camera.json"
+  }, 
+  {
+    "claim": "Aftermath of Hurricane Charley reveals message from God on billboard.", 
+    "urls": [], 
+    "claim_file": "photos_signs_charley.json"
+  }, 
+  {
+    "claim": "Photograph shows a Chicago Bears fan holding a crude sign at the 2006-07 NFC championship game.", 
+    "urls": [], 
+    "claim_file": "photos_signs_chicagobears.json"
+  }, 
+  {
+    "claim": "Photograph shows a McDonald's sign expressing support for Chick-fil-A.", 
+    "urls": [], 
+    "claim_file": "photos_signs_chickfila.json"
+  }, 
+  {
+    "claim": "Photograph shows headstone marking the grave of lawyer Johnnie Cochran.", 
+    "urls": [], 
+    "claim_file": "photos_signs_cochran.json"
+  }, 
+  {
+    "claim": "Photographs show a church sign debate over whether dogs go to heaven.", 
+    "urls": [], 
+    "claim_file": "photos_signs_dogheaven.json"
+  }, 
+  {
+    "claim": "Image shows a racially contradictory sign imploring that everyone be treated equally.", 
+    "urls": [], 
+    "claim_file": "photos_signs_equally.json"
+  }, 
+  {
+    "claim": "Photographs show a gravesite adorned with a parking meter reading \"TIME EXPIRED.\"", 
+    "urls": [], 
+    "claim_file": "photos_signs_expired.json"
+  }, 
+  {
+    "claim": "Photograph shows a store's express lane sign that illustrates the item limit with 'this many' fingers.", 
+    "urls": [], 
+    "claim_file": "photos_signs_expresslane.json"
+  }, 
+  {
+    "claim": "Farmer expresses dissatisfaction with crop prices by carving a message in his grain field.", 
+    "urls": [], 
+    "claim_file": "photos_signs_field.json"
+  }
+]
