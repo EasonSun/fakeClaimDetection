@@ -33,7 +33,7 @@ if __name__ =="__main__":
                 results = json.load(file)
             for result in results:
                 subprocess.call(["scrapy", "runspider", "-a", "aggregate_results_file=" + aggregate_results_file,
-                                 "-a", "claim_file=" + result['claim_file'], "-o",
+                                 "-a", "claim_file=" + result['claim_file'],"--nolog", "-o",
                                  final_results_folder + "/" + result['claim_file'], "articles_spider_ver2.py"], shell=False)
                 print subprocess.list2cmdline(
                     ["scrapy", "runspider", "-a", "aggregate_results_file=" + aggregate_results_file,
