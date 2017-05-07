@@ -3,11 +3,8 @@ import re
 import sys
 import os 
 
-#from overlap_lsi import overlap
-try:
-    stopwordsPath="data/stopword.txt"
-except FileNotFoundError:
-    stopwordsPath="../data/stopword.txt"
+#from overlap_lsi import overlapping
+
 
 '''
 stopWords read from file, because the sklearn one is not enough
@@ -27,9 +24,13 @@ class relatedSnippetsExtractor(object):
     def __init__(self, overlapThreshold):
         self.overlapThreshold = overlapThreshold
         self.stopWords = []  
-        with open(stopwordsPath) as f:
-            self.stopWords = f.readlines()
-            self.stopWords = [x.strip() for x in self.stopWords] 
+        try:
+            f = open("data/stopword.txt")
+        except FileNotFoundError:
+            f = open("../data/stopword.txt")
+        self.stopWords = f.readlines()
+        self.stopWords = [x.strip() for x in self.stopWords] 
+        f.close()
         print ("overlapThreshold = %f" %self.overlapThreshold)
 
 
