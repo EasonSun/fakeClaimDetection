@@ -119,7 +119,7 @@ class relatedSnippetsExtractor(object):
         #print (snippets.shape)
         # from vector back to sentence to later use them in the same feature space
         relatedSnippets = [''.join(snippet) for snippet in snippets[overlapIdx].tolist()]
-        relatedSnippets = self._clean(relatedSnippets)
+        # relatedSnippets = self._clean(relatedSnippets)
         relatedSnippetLabels = None
         if label is not None:
             relatedSnippetLabels = [label for i in range(len(overlapIdx))]
