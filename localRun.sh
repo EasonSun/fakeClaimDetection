@@ -1,7 +1,7 @@
 #!/bin/bash
-snopeDataPath="data/Snopes"
-googleDataPath="data/Google_processed"
-lgPath="data/linguisticFeatures/allFeatures.txt"
+snopeDataPath="../data/Snopes"
+googleDataPath="../data/Google_processed"
+lgPath="../data/linguisticFeatures/allFeatures.txt"
 resultPath="results/"
 srcPath="src/"
 experimentPath="results/experiment_$1/"
