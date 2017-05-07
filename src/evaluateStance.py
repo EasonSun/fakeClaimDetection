@@ -41,15 +41,6 @@ def main():
 	articles = [x.strip() for x in articles]
 	articleLabels = np.load(stancePath)
 
-	lgFeatures = {}
-	nextValue = 0
-	with open(lgPath) as f:
-		for lgFeature in f:
-			lgFeature = lgFeature.rstrip()
-			if lgFeature not in lgFeatures:
-				lgFeatures[lgFeature] = nextValue
-				nextValue += 1
-
 	relatedSnippets = []
 	relatedSnippetLabels = []
 
@@ -102,7 +93,7 @@ def main():
 		np.save(relatedSnippet_yPath, relatedSnippet_y)
 		np.save(featureNamePath, np.array(featureNames))
 		'''
-		LGExtractor = lgExtractor(lgFeatures)
+		LGExtractor = lgExtractor(lgPath)
 		relatedSnippetX, featureNames = LGExtractor.extract(relatedSnippets)
 		relatedSnippet_y = np.array(relatedSnippetLabels)
 		np.save(relatedSnippetXPath, relatedSnippetX)

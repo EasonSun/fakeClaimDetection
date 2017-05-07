@@ -2,15 +2,24 @@ import numpy as np
 import os
 
 class lgExtractor(object):
-    def __init__(self, lgFeatures):
+    def __init__(self, lgPath):
         # to be used as the vocab of vectorizer
+        lgFeatures = {}
+        nextValue = 0
+        with open(lgPath) as f:
+            for lgFeature in f:
+                lgFeature = lgFeature.rstrip()
+                if lgFeature not in lgFeatures:
+                    lgFeatures[lgFeature] = nextValue
+                    nextValue += 1
         self.lgFeatures = lgFeatures
 
     def extract(self, relatedArticles, numFeatures=3000):
         X = np.array(0)
         from sklearn.feature_extraction.text import TfidfVectorizer
         # empty string can be taken as all 0 vectors
-        # using both uni- and bi-grams
+        # lgFeatures contain uni- and bi-grams
+        # cannot use TF-IDF when vocab is given, instead use top numFeature of features.
         vectorizer = TfidfVectorizer(analyzer = "word", \
                                     token_pattern = '(?u)\\b\\w\\w+\\b|!|\\?|\\"|\\\'', \
                                     vocabulary=self.lgFeatures, \

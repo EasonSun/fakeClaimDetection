@@ -3,9 +3,13 @@
 *.png
 *.ipynb
 *.png
+*.zip
 __pycache__/
 .ipynb_checkpoints/
 data/
 results/
 network/*.json
 network/Snopes/*
+article_extraction/
+new_article_extraction
+

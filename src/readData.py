@@ -3,20 +3,13 @@ import os
 import json
 import numpy
 import numpy as np
-'''
-from extractLGfeatures import extractLGfeatures
-from evaluateLG import evaluateLG
-from evaluateStance import evaluateStance, evaluateStanceLg
-'''
 
-def main():
-	dataPath = sys.argv[1]
-	experimentPath = sys.argv[2]
+
+def readSnopes(dataPath, experimentPath):
 	claimPath = experimentPath + 'claims.txt'
 	articlePath = experimentPath + 'articles.txt'
 	stancePath = experimentPath + 'stance'
 	credPath = experimentPath + 'cred'
-	
 	if os.path.isfile(claimPath):
 		return
 
@@ -47,11 +40,20 @@ def main():
 		elif item['Credibility'] in ['false', 'mostly false']: 
 			credList.append(1) # against
 
-
 	claimFile.close()
 	articleFile.close()
 	np.save(stancePath, np.array(stanceList))
 	np.save(credPath, np.array(credList))
+
+def readGoogle(dataPath, experimentPath):
+	pass
+
+def main():
+	snopesPath = sys.argv[1]
+	experimentPath = sys.argv[2]
+	
+	readSnopes(snopesPath, experimentPath)
+	readGoogle(googlePath, experimentPath)
 
 if __name__ == '__main__':
     main()

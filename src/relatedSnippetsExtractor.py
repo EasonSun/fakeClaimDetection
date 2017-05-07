@@ -102,7 +102,13 @@ class relatedSnippetsExtractor(object):
         if (minSimilarityScore < self.overlapThreshold):
             return None, None
         # print (minSimilarityScore)
-        overlapIdx = np.where(cosine_similarity(snippetsX, claimX) > self.overlapThreshold)[0]
+        similarityScore = np.zeros((1, snippetsX.shape[0]))
+
+        numSnippets = snippetsX.shape[0]
+        for i in range(0, numSnippets ,500):
+            j = min(i+500, numSnippets-1)
+            similarityScore[0][i:j] = cosine_similarity(snippetsX[i:j], claimX)[0]
+        overlapIdx = np.where(similarityScore > self.overlapThreshold)[0]
         #print (overlapIdx)
         snippets = np.array([[snippet] for snippet in snippets])
         #print (snippets.shape)
@@ -246,7 +252,7 @@ class relatedSnippetsExtractor(object):
             cleanedSnippets.append(cleanedSnippet)
         return cleanedSnippets
 
-
+    # BoW features. Shit
     def extractFeatures(self, relatedSnippets, MIN_DF, MAX_DF):
             from sklearn.feature_extraction.text import TfidfVectorizer
             # empty string can be taken as all 0 vectors

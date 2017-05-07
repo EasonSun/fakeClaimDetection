@@ -3,13 +3,13 @@ import os
 import re
 import sys
 import time
+import json
+import _pickle as pickle
 from Classifier import Classifier
 from relatedSnippetsExtractor import relatedSnippetsExtractor
 from lgExtractor import lgExtractor
 
 experimentPath = sys.argv[1]
-claimPath = experimentPath + 'claims.txt'
-credPath = experimentPath + 'cred.npy'
 logPath = experimentPath + 'log.txt'
 sourcePath = experimentPath + 'source.npy'
 
@@ -18,7 +18,23 @@ MAX_DF = float(sys.argv[3])
 overlapThreshold = float(sys.argv[4])
 
 lgPath = sys.argv[5]
-articlePath = sys.argv[6]
+snopeDataPath = sys.argv[6]
+googleDataPath = sys.argv[7]
+
+def readSnopes(filePath):
+	filePath = os.path.join(snopeDataPath, filePath)
+	data = json.load(open(filePath, 'r', encoding='utf-8', errors='ignore'))
+	if data['Credibility'] in ['true', 'mostly true']:
+		return data['Claim'], 0# for
+	elif data['Credibility'] in ['false', 'mostly false']: 
+		return data['Claim'], 1
+
+
+def readGoogle(filePath):
+	filePath = os.path.join(googleDataPath, filePath)
+	data = json.load(open(filePath, 'r', encoding='utf-8', errors='ignore'))
+	return data['article'], data['source']
+
 
 '''
 sourceCred
@@ -26,7 +42,7 @@ shape: numArticle, 4
 value at each cell: float
 oppose true | Support false | support true | oppose false 
 '''
-def evaluateSourceCred(source, stanceByArticle, cred):
+def evaluateSourceCred(sources, stanceByArticle, cred):
 	lc = len(source)
 	sourceCred = np.zeros((len(source),4))
 	for i in range(lc):	
@@ -50,19 +66,7 @@ def evaluateSourceCred(source, stanceByArticle, cred):
 
 
 def main():
-	logFile = open(logPath, 'a')
-
-	claims = []
-	with open(claimPath) as f:
-		claims = f.readlines()
-	lgFeatures = {}
-	nextValue = 0
-	with open(lgPath) as f:
-		for lgFeature in f.readlines():
-			lgFeatures[lgFeature] = nextValue
-			nextValue += 1
-	credOrig = np.load(credPath)
-
+	#logFile = open(logPath, 'a')
 	'''
 	read articles and source 
 	'''
@@ -87,46 +91,74 @@ def main():
 	claimArticleIdx = []
 	relatedArticles = []
 	relatedSources= []
-	cred = []	
+	creds = []	
 
 	RSExtractor = relatedSnippetsExtractor(overlapThreshold)
-	LGExtractor = lgExtractor(lgFeatures)
 
 	curClaimIdx = 0
 	curArticleIdx = 0
-	for claim in claims:
-		articles_ = articles[curArticleIdx]
-		sources_ = sources[curArticleIdx]
-		lgX_ = np.zeros(len(lgFeatures))
-		for article, source in zip(articles_, sources_):
-			relatedSnippets_, _ = RSExtractor.extract(claim, article)
-			if relatedSnippets_ is not None:
-				numRelatedSnippets_ = len(relatedSnippets_)
-				# extract grature要等到最后
-				# 要存一个relatedArticles
-				articleSnippetIdx.extend([curArticleIdx for i in range(numRelatedSnippets_)])
-				relatedSnippets.extend(relatedSnippets_)
+	everythingPath = os.path.join(experimentPath, 'everything')
+	if not os.path.isfile(everythingPath):
+		print ('reading data')
+		_numClaim = 0
+		_numArticle = 0
+		# each is a claim
+		for filePath in os.listdir(googleDataPath):
+			_numClaim += 1
+			if not filePath.endswith('.json'):
+				continue
+			articles_, sources_ = readGoogle(filePath)
+			claim, cred = readSnopes(filePath)
+			for article, source in zip(articles_, sources_):
+				_numArticle += 1
+				relatedSnippets_, _ = RSExtractor.extract(claim, article)
+				if relatedSnippets_ is not None:
+					numRelatedSnippets_ = len(relatedSnippets_)
+					# extract grature要等到最后
+					# 要存一个relatedArticles
+					articleSnippetIdx.extend([curArticleIdx for i in range(numRelatedSnippets_)])
+					relatedSnippets.extend(relatedSnippets_)
 
-				claimArticleIdx.append(curClaimIdx)
-				relatedArticles.append(article)
+					claimArticleIdx.append(curClaimIdx)
+					relatedArticles.append(article)
 
-				relatedSources.append(source)
-				cred.append[credOrig[curClaimIdx]]
-			curArticleIdx += 1
-		curClaimIdx += 1
+					relatedSources.append(source)
+					creds.append(cred)
+				curArticleIdx += 1
+			curClaimIdx += 1
+		f = open(everythingPath, 'wb')
+		pickle.dump(articleSnippetIdx, f)
+		pickle.dump(relatedSnippets, f)
+		pickle.dump(claimArticleIdx, f)
+		pickle.dump(relatedArticles, f)
+		pickle.dump(relatedSources, f)
+		pickle.dump(creds, f)
+		print (_numClaim, _numArticle)
+	else:
+		print ('loading data')
+		f = open(everythingPath, 'rb')
+		articleSnippetIdx = pickle.load(f)
+		relatedSnippets = pickle.load(f)
+		claimArticleIdx = pickle.load(f)
+		relatedArticles = pickle.load(f)
+		relatedSources= pickle.load(f)
+		creds = pickle.load(f)	
 
 	'''
 	relateRatio = len(claimSnippetIdx) / len(claims)
 	print (relateRatio)
 	logFile.write(relateRatio + '\n')
 	'''
+	print ('stance feature')
 	numSnippet = len(articleSnippetIdx)
 	assert(numSnippet == len(relatedSnippets))
-	numArticle = np.unique(np.array(articleSnippetIdx)).shape
+	numArticle = np.unique(np.array(articleSnippetIdx)).shape[0]
 	assert (numArticle == len(relatedArticles))
 
-	relatedSnippetsX, _, _ = RSExtractor.extractFeatures(relatedSnippets)
+	LGExtractor = lgExtractor(lgPath)
+	relatedSnippetX, _ = LGExtractor.extract(relatedSnippets, numFeatures=2000)
 	stanceClf = Classifier(relatedSnippetX, 'stance', logPath, experimentPath)
+	# use trained?
 	stanceProb = stanceClf.predict_porb()
 
 	numClass = stanceProb.shape[1]
@@ -135,6 +167,7 @@ def main():
 	for i in range(numClass):
 		stanceProbByArticle[i,:] = np.bincount(idx, weights=stanceProb[:,i]) / counts
 
+	print ('lg feature')
 	lgX = LGExtractor.extract(relatedArticles)
 	assert(numArticle == lgX.shape[0])
 	'''
@@ -146,9 +179,10 @@ def main():
 	'''
 	X = np.append(stanceProbByArticle.T, lgX, axis=1)
 	assert(X.shape[1] == numFeature + numClass)
-	y = np.array(cred)
+	y = np.array(creds)
 	assert(X.shape[0] == y.shape)
 
+	print ('classification')
 	credClf = Classifier(X, 'cred', logPath, experimentPath, y)
 
 	#sourceCred: [n_samples], or [numArticle]
@@ -158,12 +192,16 @@ def main():
 	sourceCredByStance, _ = evaluateSourceCred(relatedSources, stanceByArticle, cred)
 
 	# (cv, numClaim, numClass)
+	# per article
 	credClf.crossValidate(sourceCredByStance)
 
+	# per claim
 	credClf.crossValidate(sourceCredByStance, claimArticleIdx)
 
 	logFile.close()
 
+if __name__ == '__main__':
+    main()
 
 
 
