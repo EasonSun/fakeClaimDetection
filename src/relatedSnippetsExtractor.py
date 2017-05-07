@@ -4,7 +4,11 @@ import sys
 import os 
 
 #from overlap_lsi import overlap
-stopwordsPath="data/stopword.txt"
+try:
+    stopwordsPath="data/stopword.txt"
+except FileNotFoundError:
+    stopwordsPath="../data/stopword.txt"
+
 '''
 stopWords read from file, because the sklearn one is not enough
 handled by NER
