@@ -7,7 +7,6 @@ sys.path.append('src/') # This line is added because otherwise it will show Modu
 import time
 import json
 import psutil
-from memory_profiler import profile
 import _pickle as pickle
 from Classifier import Classifier
 from relatedSnippetsExtractor import relatedSnippetsExtractor
@@ -181,6 +180,8 @@ def main():
 		relatedArticles = pickle.load(f)
 		relatedSources= pickle.load(f)
 		creds = pickle.load(f)	
+
+	return
 
 	'''
 	relateRatio = len(claimSnippetIdx) / len(claims)
