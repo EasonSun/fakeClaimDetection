@@ -80,7 +80,7 @@ def selfSimilarityAccuracy(model):
 	return numSame / numArticle
 
 ctr = 0
-chunk = 3
+chunk = 1000
 numChunk = 1
 for filePath in os.listdir(googleDataPath):
 	if filePath == '.DS_Store':
