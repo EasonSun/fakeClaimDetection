@@ -124,7 +124,7 @@ def main():
 			for article, source in zip(articles_, sources_):
 
 				_numArticle += 1
-				if (_numArticle == 18):
+				if (_numArticle == 19):
 					print ('darn')
 				relatedSnippets_, _ = RSExtractor.extract(claim, article)
 				if relatedSnippets_ is not None:
