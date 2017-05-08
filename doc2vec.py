@@ -118,13 +118,25 @@ numChunk = 73
 print (str(ctr)+' articles loaded')
 #print (train_corpus[1])
 
-model = gensim.models.doc2vec.Doc2Vec(size=300, min_count=3, window=3, workers=4)
+model = gensim.models.doc2vec.Doc2Vec(size=300, min_count=10, window=3, workers=4)
 for j in range(1, numChunk+1):
 	with open(outDataPath+str(j), 'rb') as f:
 		train_corpus.extend(pickle.load(f))
+	print (j)
+'''
+#local
 model.build_vocab(train_corpus)
 del train_corpus
 train_corpus = []
+'''
+# on server
+model.scan_vocab(train_corpus)
+del train_corpus
+train_corpus = []
+#model.scale_vocab(min_count=10, dry_run=True)
+model.scale_vocab(min_count=10)
+model.finalize_vocab()
+
 print (len(model.wv.vocab))
 model.save(doc2vecModelPath)
 
