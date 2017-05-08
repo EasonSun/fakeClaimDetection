@@ -102,7 +102,7 @@ if (train_corpus != []):
 	del train_corpus
 	train_corpus = []
 '''
-or filePath in os.listdir(googleDataPath):
+for filePath in os.listdir(googleDataPath):
 	if filePath == '.DS_Store':
 		continue
 	articles_, _ = readGoogle(filePath)
