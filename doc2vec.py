@@ -3,10 +3,12 @@ import os
 import collections
 import random
 import json
+import pickle
 
 # on server
 googleDataPath="../data/Google_processed"
 doc2vecModelPath="../data/doc2vecModel"
+outDataPath="../data/trainedCorpus"
 
 '''
 googleDataPath="data/Google_test"
@@ -73,6 +75,9 @@ for filePath in os.listdir(googleDataPath):
 	if articles_ == [""]:
 		continue
 	train_corpus.extend(list(formatArticle(articles_)))
+	if ctr%5000 == 0:
+		pickle.dump(train_corpus, open(outDataPath+ctr, 'wb'))
+		del train_corpus
 
 print (str(ctr)+' articles loaded')
 #print (train_corpus[1])
