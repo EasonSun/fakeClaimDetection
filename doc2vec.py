@@ -114,7 +114,7 @@ for filePath in os.listdir(googleDataPath):
 		print (numChunk)
 		numChunk += 1
 '''
-
+numChunk = 73
 print (str(ctr)+' articles loaded')
 #print (train_corpus[1])
 
@@ -122,7 +122,7 @@ model = gensim.models.doc2vec.Doc2Vec(size=300, min_count=3, window=3, workers=4
 for j in range(1, numChunk+1):
 	with open(outDataPath+str(j), 'rb') as f:
 		train_corpus.extend(pickle.load(f))
-model.build_vocab([train_corpus])
+model.build_vocab(train_corpus)
 del train_corpus
 train_corpus = []
 print (len(model.wv.vocab))
