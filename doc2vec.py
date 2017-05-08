@@ -5,6 +5,7 @@ import random
 import json
 import pickle
 
+
 # on server
 googleDataPath="../data/Google_processed"
 doc2vecModelPath="../data/doc2vecModel"
@@ -13,7 +14,9 @@ outDataPath="../data/trainedCorpus"
 '''
 googleDataPath="data/Google_test"
 doc2vecModelPath="data/doc2vecModel"
+outDataPath="data/trainedCorpus"
 '''
+
 train_corpus = []
 
 def readGoogle(filePath):
@@ -58,40 +61,80 @@ def formatArticle(articles):
 		yield gensim.models.doc2vec.TaggedDocument(articleList, [ctr])
 		ctr += 1
 
-def selfSimilarityAccuracy(model, ctr):
+def selfSimilarityAccuracy(model):
 	ranks = []
-	for doc_id in range(ctr):
-	    inferred_vector = model.infer_vector(train_corpus[doc_id].words)
-	    sims = model.docvecs.most_similar([inferred_vector], topn=len(model.docvecs))
-	    rank = [docid for docid, sim in sims].index(doc_id)
-	    ranks.append(rank)
-	rankSummary = collections.Counter(ranks)
-	return (rankSummary[0]+rankSummary[1]+rankSummary[2])/ctr
+	numArticle = len(train_corpus)
+	#for doc_id in range(numArticle):
+	numSame = 0
+	for article in train_corpus:
+	    inferred_vector = model.infer_vector(article.words)
+	    sims = model.docvecs.most_similar([inferred_vector], topn=1)
+	    #print (article.tags[0], sims[0][0])
+	    if article.tags[0] == sims[0][0]:
+	    	numSame += 1
+	    #rank = [docid for docid, sim in sims].index(doc_id)
+	    #ranks.append(rank)
+	#rankSummary = collections.Counter(ranks)
+	#print (rankSummary)
+	#return (rankSummary[0]+rankSummary[1]+rankSummary[2])/numArticle
+	return numSame / numArticle
 
 ctr = 0
-
+chunk = 3
+numChunk = 1
 for filePath in os.listdir(googleDataPath):
+	if filePath == '.DS_Store':
+		continue
 	articles_, _ = readGoogle(filePath)
 	if articles_ == [""]:
 		continue
 	train_corpus.extend(list(formatArticle(articles_)))
-	if ctr%5000 == 0:
-		pickle.dump(train_corpus, open(outDataPath+ctr, 'wb'))
+	if ctr >= chunk*numChunk and ctr != 0:
+		print (numChunk)
+		pickle.dump(train_corpus, open(outDataPath+str(numChunk), 'wb'))
 		del train_corpus
+		train_corpus = []
+		numChunk += 1
+if (train_corpus != []):
+	pickle.dump(train_corpus, open(outDataPath+str(numChunk), 'wb'))
+	del train_corpus
+	train_corpus = []
+
+'''
+for filePath in os.listdir('data'):
+	if filePath.startswith('trainedCorpus'):
+		filePath = os.path.join(googleDataPath, filePath)
+		train_corpus_ = pickle.load(train_corpus, open(filePath, 'rb'))
+		train_corpus.expend(train_corpus_)
+'''
+
+for j in range(1, numChunk+1):
+	train_corpus_ = pickle.load(open(outDataPath+str(j), 'rb'))
+	train_corpus.extend(train_corpus_)
+
 
 print (str(ctr)+' articles loaded')
 #print (train_corpus[1])
 
-model = gensim.models.doc2vec.Doc2Vec(size=300, min_count=3, window=3)
+model = gensim.models.doc2vec.Doc2Vec(size=300, min_count=3, window=3, workers=4)
 model.build_vocab(train_corpus)
 print (len(model.wv.vocab))
+model.save(doc2vecModelPath)
+del train_corpus
+train_corpus = []
 #training can vary a little becasue random seeds.
 prevRankAccu = 0
-iter = 5
-while(True):
-	model.train(train_corpus, total_examples=model.corpus_count, epochs=iter)
-	rankAccu = selfSimilarityAccuracy(model, ctr)
-	if (rankAccu < prevRankAccu + .01):
+iter = 20
+for ijk in range(15):
+	for j in range(1, numChunk+1):
+		train_corpus_ = pickle.load(open(outDataPath+str(j), 'rb'))
+		model.train(train_corpus_, total_examples=model.corpus_count, epochs=iter)
+	model.save(doc2vecModelPath)
+	j = random.randint(1, numChunk)
+	train_corpus = pickle.load(open(outDataPath+str(j), 'rb'))
+	rankAccu = selfSimilarityAccuracy(model)
+	#print (rankAccu)
+	if (rankAccu != 0 and rankAccu < prevRankAccu + .01):
 		model.train(train_corpus, total_examples=model.corpus_count, epochs=iter-2)
 		break
 	prevRankAccu = rankAccu
@@ -101,6 +144,7 @@ while(True):
 print (prevRankAccu)
 model.delete_temporary_training_data(keep_doctags_vectors=True, keep_inference=True)
 model.save(doc2vecModelPath)
+print (model.n_similarity("i am a boy".split(), "she is a girl".split()))
 '''
 r1 = print (model.n_similarity("i am a boy".split(), "she is a girl".split()))
 
