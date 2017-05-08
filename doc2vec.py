@@ -82,6 +82,7 @@ def selfSimilarityAccuracy(model):
 ctr = 0
 chunk = 1000
 numChunk = 1
+'''
 for filePath in os.listdir(googleDataPath):
 	if filePath == '.DS_Store':
 		continue
@@ -95,33 +96,39 @@ for filePath in os.listdir(googleDataPath):
 		del train_corpus
 		train_corpus = []
 		numChunk += 1
+
 if (train_corpus != []):
 	pickle.dump(train_corpus, open(outDataPath+str(numChunk), 'wb'))
 	del train_corpus
 	train_corpus = []
+'''
+or filePath in os.listdir(googleDataPath):
+	if filePath == '.DS_Store':
+		continue
+	articles_, _ = readGoogle(filePath)
+	if articles_ == [""]:
+		continue
+	if ctr >= chunk*numChunk and ctr != 0:
+		print (numChunk)
+		numChunk += 1
+'''
+# cannot do this batch learning
 
 '''
-for filePath in os.listdir('data'):
-	if filePath.startswith('trainedCorpus'):
-		filePath = os.path.join(googleDataPath, filePath)
-		train_corpus_ = pickle.load(train_corpus, open(filePath, 'rb'))
-		train_corpus.expend(train_corpus_)
-'''
-
-for j in range(1, numChunk+1):
-	train_corpus_ = pickle.load(open(outDataPath+str(j), 'rb'))
-	train_corpus.extend(train_corpus_)
-
 
 print (str(ctr)+' articles loaded')
 #print (train_corpus[1])
 
 model = gensim.models.doc2vec.Doc2Vec(size=300, min_count=3, window=3, workers=4)
+for j in range(1, numChunk+1):
+	with open(outDataPath+str(j), 'rb') as f:
+		train_corpus.extend(pickle.load(f))
 model.build_vocab(train_corpus)
-print (len(model.wv.vocab))
-model.save(doc2vecModelPath)
 del train_corpus
 train_corpus = []
+print (len(model.wv.vocab))
+model.save(doc2vecModelPath)
+
 #training can vary a little becasue random seeds.
 prevRankAccu = 0
 iter = 20
