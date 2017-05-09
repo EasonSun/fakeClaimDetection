@@ -1,8 +1,8 @@
 import sys
 import os
 import json
-import numpy
 import numpy as np
+import pickle
 
 
 def readSnopes(dataPath, experimentPath):
@@ -48,12 +48,25 @@ def readSnopes(dataPath, experimentPath):
 def readGoogle(dataPath, experimentPath):
 	pass
 
+def readGlove(gloveFile, experimentPath):
+    f = open(gloveFile,'r')
+    model = {}
+    for line in f:
+        splitLine = line.split()
+        word = splitLine[0]
+        embedding = np.array([float(val) for val in splitLine[1:]])
+        model[word] = embedding
+    print ("Done.",len(model)," words loaded!")
+    pickle.dump(model, open(experimentPath+'glove', 'wb'))
+
 def main():
 	snopesPath = sys.argv[1]
 	experimentPath = sys.argv[2]
-	
+	glovePath = sys.argv[3]
+
 	readSnopes(snopesPath, experimentPath)
-	readGoogle(googlePath, experimentPath)
+	#readGoogle(googlePath, experimentPath)
+	readGlove(glovePath, experimentPath)
 
 if __name__ == '__main__':
     main()

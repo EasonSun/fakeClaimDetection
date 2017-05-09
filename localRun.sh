@@ -22,9 +22,9 @@ MIN_DF=".006"
 MAX_DF=".5"
 echo overlapThreshold >> experimentLogPath
 ### read data
-# python3 src/readData.py $snopeDataPath $experimentPath
+#python3 src/readData.py $snopeDataPath $experimentPath $gloveDataPath
 ### evaluate stance classifier
 ### python3 src/evaluateStance.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold
 ### evaluate claim credibility
-overlapThreshold=".02"
-python3 -m pdb src/evaluateClaim\ copy.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold $lgPath $snopeDataPath $googleDataPath
+overlapThreshold=".55"
+python3 src/evaluateClaim.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold $lgPath $snopeDataPath $googleDataPath

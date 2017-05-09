@@ -50,7 +50,8 @@ def senList(article):
 	    return l.split('.')
 
 	article_ = [clean(s) for s in sentences(article)]
-	article_ = [x.split() for x in article_ if len(x.split())>1]
+	# trim off the short broken sentences.
+	article_ = [x.split() for x in article_ if len(x.split())>3]
 	return [item for sublist in article_ for item in sublist]
 
 # articles: a list of str, each str is an article

@@ -111,8 +111,10 @@ def main():
 			claim, cred = readSnopes(filePath)
 			for article, source in zip(articles_, sources_):
 				_numArticle += 1
-				relatedSnippets_, _ = RSExtractor.extract(claim, article)
+				relatedSnippets_, _ = RSExtractor.extract(claim, article, glovePath=experimentPath+'glove')
+
 				if relatedSnippets_ is not None:
+					print (len(relatedSnippets_))
 					numRelatedSnippets_ = len(relatedSnippets_)
 					# extract grature要等到最后
 					# 要存一个relatedArticles

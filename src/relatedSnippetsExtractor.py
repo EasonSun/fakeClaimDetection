@@ -2,6 +2,7 @@ import numpy as np
 import re
 import sys
 import os 
+import pickle
 
 #from overlap_lsi import overlapping
 
@@ -34,7 +35,7 @@ class relatedSnippetsExtractor(object):
         print ("overlapThreshold = %f" %self.overlapThreshold)
 
 
-    def extract(self, claim, article, label=None):
+    def extract(self, claim, article, label=None, glovePath=None):
         from sklearn.feature_extraction.text import CountVectorizer
         # empty string can be taken as all 0 vectors
         # using both uni- and bi-grams
@@ -46,9 +47,9 @@ class relatedSnippetsExtractor(object):
                                     ngram_range=(1, 2))
                                      #max_features = 5000) 
 
-        from sklearn.metrics.pairwise import cosine_similarity
         # print (article)
         # print (claim)
+        claim = self._cleanText(claim)
         snippets = self._extractSnippets(article)
         # print (snippets)
 
@@ -80,6 +81,7 @@ class relatedSnippetsExtractor(object):
         '''
         
         # find vocab for this pair so as to do vector similarity
+        '''
         vectorizer.vocabulary = None
         vocab = self._extractVocab([claim], snippets, vectorizer)
         if len(vocab.keys()) == 0:
@@ -97,28 +99,51 @@ class relatedSnippetsExtractor(object):
         assert(vectorizer.vocabulary == vocab)
         snippetsX = snippetsX.toarray()
         # print(snippetsX.shape)
+        '''
 
-        similarityScore = cosine_similarity(claimX, snippetsX)
+        glove = pickle.load(open(glovePath, 'rb'))
+        def _sentence2Glove(sentence):
+            from operator import add
+            vec = np.zeros((1,200))
+            ctr = 0
+            for word in sentence:
+                if word in glove:
+                    vec += glove[word]
+                    ctr += 1
+            if ctr != 0:
+                return vec / ctr
+            else:
+                return vec
+
+        claimX = _sentence2Glove(claim.split())
+        #print (claimX.shape)
+        snippetsX = None
+        #print (len(snippets))
+        for snippet in snippets:
+            if snippetsX is None:
+                snippetsX = _sentence2Glove(snippet.split())
+            else:
+                snippetsX = np.vstack((snippetsX, _sentence2Glove(snippet)))
+        #print (snippetsX.shape) 
+        from sklearn.metrics.pairwise import cosine_similarity
+        similarityScore = cosine_similarity(claimX, snippetsX)[0]
+        del claimX
+        del snippetsX
         # print (similarityScore)
         if (np.count_nonzero(similarityScore) == 0):
             # bad and weird thing happens 
             return None, None
-        minSimilarityScore = np.min(similarityScore[np.nonzero(similarityScore)])
+        minSimilarityScore = np.max(similarityScore[np.nonzero(similarityScore)])
         if (minSimilarityScore < self.overlapThreshold):
             return None, None
         # print (minSimilarityScore)
-        similarityScore = np.zeros((1, snippetsX.shape[0]))
-
-        numSnippets = snippetsX.shape[0]
-        for i in range(0, numSnippets ,500):
-            j = min(i+500, numSnippets-1)
-            similarityScore[0][i:j] = cosine_similarity(snippetsX[i:j], claimX)[0]
         overlapIdx = np.where(similarityScore > self.overlapThreshold)[0]
-        #print (overlapIdx)
+        print (overlapIdx)
         snippets = np.array([[snippet] for snippet in snippets])
         #print (snippets.shape)
         # from vector back to sentence to later use them in the same feature space
         relatedSnippets = [''.join(snippet) for snippet in snippets[overlapIdx].tolist()]
+        del snippets
         # relatedSnippets = self._clean(relatedSnippets)
         relatedSnippetLabels = None
         if label is not None:
@@ -176,7 +201,7 @@ class relatedSnippetsExtractor(object):
                     snippet += temp[j]
                 else:
                     snippet += ' ' + temp[j]
-            snippets.append(snippet)
+            snippets.append(self._cleanText(snippet))
 
             # grab non overlapping snippets
             '''
@@ -287,8 +312,23 @@ class relatedSnippetsExtractor(object):
             # print("relatedSnippetX dim and relatedSnippet_y dim: ")
             # print(relatedSnippetX.shape, relatedSnippet_y.shape)
 
+    def _cleanText(self, text):
+        import re
+        contractions = re.compile(r"'|-|\"")
+        # all non alphanumeric
+        symbols = re.compile(r'(\W+)', re.U)
+        # single character removal
+        singles = re.compile(r'(\s\S\s)', re.I|re.U)
+        # separators (any whitespace)
+        seps = re.compile(r'\s+')
 
-
+        # cleaner (order matters)
+        text = text.lower()
+        text = contractions.sub('', text)
+        text = symbols.sub(r' \1 ', text)
+        text = singles.sub(' ', text)
+        text = seps.sub(' ', text)
+        return text
 
 
 
