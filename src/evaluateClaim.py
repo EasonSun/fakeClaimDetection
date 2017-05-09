@@ -104,6 +104,7 @@ def main():
 		_numArticle = 0
 		# each is a claim
 		for filePath in os.listdir(googleDataPath):
+			print(filePath[:5])
 			_numClaim += 1
 			if not filePath.endswith('.json'):
 				continue

@@ -25,5 +25,5 @@ echo overlapThreshold >> experimentLogPath
 ### evaluate stance classifier
 ### python3 src/evaluateStance.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold
 ### evaluate claim credibility
-overlapThreshold=".02"
+overlapThreshold=".55"
 python3 src/evaluateClaim.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold $lgPath $snopeDataPath $googleDataPath
