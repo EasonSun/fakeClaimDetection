@@ -114,7 +114,7 @@ def main():
 				relatedSnippets_, _ = RSExtractor.extract(claim, article, glovePath=experimentPath+'glove')
 
 				if relatedSnippets_ is not None:
-					print (len(relatedSnippets_))
+					#print (len(relatedSnippets_))
 					numRelatedSnippets_ = len(relatedSnippets_)
 					# extract grature要等到最后
 					# 要存一个relatedArticles

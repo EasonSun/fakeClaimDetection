@@ -138,7 +138,7 @@ class relatedSnippetsExtractor(object):
             return None, None
         # print (minSimilarityScore)
         overlapIdx = np.where(similarityScore > self.overlapThreshold)[0]
-        print (overlapIdx)
+        #print (overlapIdx)
         snippets = np.array([[snippet] for snippet in snippets])
         #print (snippets.shape)
         # from vector back to sentence to later use them in the same feature space
