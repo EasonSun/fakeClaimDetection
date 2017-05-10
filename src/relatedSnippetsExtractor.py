@@ -3,6 +3,8 @@ import re
 import sys
 import os 
 import pickle
+from sklearn.metrics.pairwise import cosine_similarity
+import time
 
 #from overlap_lsi import overlapping
 
@@ -18,11 +20,18 @@ too harsh
 neg
 'no', 'not'
 '''
-
+contractions = re.compile(r"'|-|\"")
+# all non alphanumeric
+symbols = re.compile(r'(\W+)', re.U)
+# single character removal
+singles = re.compile(r'(\s\S\s)', re.I|re.U)
+# separators (any whitespace)
+seps = re.compile(r'\s+')
+alteos = re.compile(r'([!\?])')
 
 class relatedSnippetsExtractor(object):
     """docstring for ClassName"""
-    def __init__(self, overlapThreshold):
+    def __init__(self, overlapThreshold, glovePath=None):
         self.overlapThreshold = overlapThreshold
         self.stopWords = []  
         try:
@@ -32,13 +41,15 @@ class relatedSnippetsExtractor(object):
         self.stopWords = f.readlines()
         self.stopWords = [x.strip() for x in self.stopWords] 
         f.close()
+        self.glove = pickle.load(open(glovePath, 'rb'))
         print ("overlapThreshold = %f" %self.overlapThreshold)
 
 
-    def extract(self, claim, article, label=None, glovePath=None):
-        from sklearn.feature_extraction.text import CountVectorizer
+    def extract(self, claim, article, label=None):
+        #from sklearn.feature_extraction.text import CountVectorizer
         # empty string can be taken as all 0 vectors
         # using both uni- and bi-grams
+        '''
         vectorizer = CountVectorizer(analyzer = "word", \
                                     preprocessor = None, \
                                     # watch out stop words, should not extract named entities!
@@ -46,11 +57,12 @@ class relatedSnippetsExtractor(object):
                                     stop_words = 'english', \
                                     ngram_range=(1, 2))
                                      #max_features = 5000) 
-
+        '''
         # print (article)
         # print (claim)
         claim = self._cleanText(claim)
-        snippets = self._extractSnippets(article)
+        claimX = self._sentence2Glove(claim.split())
+        snippets, snippetsX = self._extractSnippets(article)
         # print (snippets)
 
         '''
@@ -101,31 +113,9 @@ class relatedSnippetsExtractor(object):
         # print(snippetsX.shape)
         '''
 
-        glove = pickle.load(open(glovePath, 'rb'))
-        def _sentence2Glove(sentence):
-            from operator import add
-            vec = np.zeros((1,200))
-            ctr = 0
-            for word in sentence:
-                if word in glove:
-                    vec += glove[word]
-                    ctr += 1
-            if ctr != 0:
-                return vec / ctr
-            else:
-                return vec
-
-        claimX = _sentence2Glove(claim.split())
         #print (claimX.shape)
-        snippetsX = None
-        #print (len(snippets))
-        for snippet in snippets:
-            if snippetsX is None:
-                snippetsX = _sentence2Glove(snippet.split())
-            else:
-                snippetsX = np.vstack((snippetsX, _sentence2Glove(snippet)))
+
         #print (snippetsX.shape) 
-        from sklearn.metrics.pairwise import cosine_similarity
         similarityScore = cosine_similarity(claimX, snippetsX)[0]
         del claimX
         del snippetsX
@@ -139,10 +129,12 @@ class relatedSnippetsExtractor(object):
         # print (minSimilarityScore)
         overlapIdx = np.where(similarityScore > self.overlapThreshold)[0]
         #print (overlapIdx)
-        snippets = np.array([[snippet] for snippet in snippets])
+        #snippets = np.array([[snippet] for snippet in snippets])
         #print (snippets.shape)
         # from vector back to sentence to later use them in the same feature space
-        relatedSnippets = [''.join(snippet) for snippet in snippets[overlapIdx].tolist()]
+        #print (snippets)
+
+        relatedSnippets = [''.join(snippet) for snippet in np.array(snippets)[overlapIdx].tolist()]
         del snippets
         # relatedSnippets = self._clean(relatedSnippets)
         relatedSnippetLabels = None
@@ -157,9 +149,13 @@ class relatedSnippetsExtractor(object):
 
     def _extractSnippets(self, article):
         snippets = []
+        snippetsX = None
         # snippetMarkNumbers = []   #list of list, inner list records number of ! ? ""
         NSS = 4 # number of a snippet in a sentence
-        articleSentences = re.split(r'[.|!|?]', article)
+
+        articleSentences = alteos.sub(r' \1 .', article).rstrip("(\.)*\n").split('.')
+        articleSentences = [sen for sen in articleSentences if len(sen.split())>3]
+        # articleSentences = re.split(r'[.|!|?]', article)
         
         '''
         # this tries to keep ! ? " marks
@@ -183,26 +179,32 @@ class relatedSnippetsExtractor(object):
         
         # no stripped kinda needed: like $100, "bill", these are critical
         # but vocab from the vectorizer is without these 
-        for i in range(len(articleSentences)):
-            sentence = " ".join(re.findall("[a-zA-Z0-9'-]+", articleSentences[i]))
-            articleSentences[i] =  sentence
-        
+        '''
+        t1 = time.clock()
         while '' in articleSentences:
             articleSentences.remove('')
-
+        t2 = time.clock()
+        print ('while')
+        print (t2-t1)
+        '''
         
         if (len(articleSentences) < NSS):
-            return [" ".join(articleSentences)]
+            snippet = " ".join(articleSentences)
+            if snippetsX is None:
+                snippetsX = self._sentence2Glove(snippet.split())
+            else:
+                snippetsX = np.vstack((snippetsX, self._sentence2Glove(snippet)))   
+            return [snippet], snippetsX
         for i in range(0, len(articleSentences) - NSS + 1, NSS):
             temp = articleSentences[i : i+NSS]
-            snippet = ""
-            for j in range(NSS):
-                if snippet == '':
-                    snippet += temp[j]
-                else:
-                    snippet += ' ' + temp[j]
-            snippets.append(self._cleanText(snippet))
+            snippet = ' '.join(temp)
+            snippet = self._cleanText(snippet)
+            snippets.append([snippet])
 
+            if snippetsX is None:
+                snippetsX = self._sentence2Glove(snippet.split())
+            else:
+                snippetsX = np.vstack((snippetsX, self._sentence2Glove(snippet)))   
             # grab non overlapping snippets
             '''
             snippetMarkNumber = [0,0,0]
@@ -217,7 +219,7 @@ class relatedSnippetsExtractor(object):
 
             snippetMarkNumbers.append(snippetMarkNumber)
             '''
-        return snippets
+        return snippets, snippetsX
 
 
     def _extractVocab(self, claims, snippets, vectorizer):
@@ -312,16 +314,7 @@ class relatedSnippetsExtractor(object):
             # print("relatedSnippetX dim and relatedSnippet_y dim: ")
             # print(relatedSnippetX.shape, relatedSnippet_y.shape)
 
-    def _cleanText(self, text):
-        import re
-        contractions = re.compile(r"'|-|\"")
-        # all non alphanumeric
-        symbols = re.compile(r'(\W+)', re.U)
-        # single character removal
-        singles = re.compile(r'(\s\S\s)', re.I|re.U)
-        # separators (any whitespace)
-        seps = re.compile(r'\s+')
-
+    def _cleanText(self, text):        
         # cleaner (order matters)
         text = text.lower()
         text = contractions.sub('', text)
@@ -329,6 +322,18 @@ class relatedSnippetsExtractor(object):
         text = singles.sub(' ', text)
         text = seps.sub(' ', text)
         return text
+
+    def _sentence2Glove(self, sentence):
+        vec = np.zeros((1,200))
+        ctr = 0
+        for word in sentence:
+            if word in self.glove:
+                vec += self.glove[word]
+                ctr += 1
+        if ctr != 0:
+            return vec / ctr
+        else:
+            return vec
 
 
 

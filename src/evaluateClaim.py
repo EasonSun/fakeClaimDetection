@@ -91,20 +91,25 @@ def main():
 	claimArticleIdx = []
 	relatedArticles = []
 	relatedSources= []
-	creds = []	
+	creds = []
 
-	RSExtractor = relatedSnippetsExtractor(overlapThreshold)
+	RSExtractor = relatedSnippetsExtractor(overlapThreshold, glovePath=experimentPath+'glove')
 
 	curClaimIdx = 0
 	curArticleIdx = 0
 	everythingPath = os.path.join(experimentPath, 'everything')
+
 	if not os.path.isfile(everythingPath):
 		print ('reading data')
 		_numClaim = 0
 		_numArticle = 0
 		# each is a claim
-		for filePath in os.listdir(googleDataPath):
-			print(filePath[:5])
+		#for filePath in os.listdir(googleDataPath):
+		fileList = os.listdir(googleDataPath)
+		fileListLen = len(fileList)
+		t1 = time.clock()
+		for i in range(fileListLen):
+			filePath = fileList[i]
 			_numClaim += 1
 			if not filePath.endswith('.json'):
 				continue
@@ -112,7 +117,7 @@ def main():
 			claim, cred = readSnopes(filePath)
 			for article, source in zip(articles_, sources_):
 				_numArticle += 1
-				relatedSnippets_, _ = RSExtractor.extract(claim, article, glovePath=experimentPath+'glove')
+				relatedSnippets_, _ = RSExtractor.extract(claim, article)
 
 				if relatedSnippets_ is not None:
 					#print (len(relatedSnippets_))
@@ -129,6 +134,30 @@ def main():
 					creds.append(cred)
 				curArticleIdx += 1
 			curClaimIdx += 1
+
+			if i!=0 and i%500 == 0:
+				print (i)
+				f = open(everythingPath+str(i), 'wb')
+				pickle.dump(articleSnippetIdx, f)
+				pickle.dump(relatedSnippets, f)
+				pickle.dump(claimArticleIdx, f)
+				pickle.dump(relatedArticles, f)
+				pickle.dump(relatedSources, f)
+				pickle.dump(creds, f)
+				del articleSnippetIdx
+				del relatedSnippets
+				del claimArticleIdx
+				del relatedArticles
+				del relatedSources
+				del creds
+				articleSnippetIdx = []
+				relatedSnippets = []
+				claimArticleIdx = []
+				relatedArticles = []
+				relatedSources= []
+				creds = []
+				f.close()
+
 		f = open(everythingPath, 'wb')
 		pickle.dump(articleSnippetIdx, f)
 		pickle.dump(relatedSnippets, f)
@@ -137,6 +166,7 @@ def main():
 		pickle.dump(relatedSources, f)
 		pickle.dump(creds, f)
 		print (_numClaim, _numArticle)
+		f.close()
 	else:
 		print ('loading data')
 		f = open(everythingPath, 'rb')
@@ -146,6 +176,7 @@ def main():
 		relatedArticles = pickle.load(f)
 		relatedSources= pickle.load(f)
 		creds = pickle.load(f)	
+	return
 
 	'''
 	relateRatio = len(claimSnippetIdx) / len(claims)
