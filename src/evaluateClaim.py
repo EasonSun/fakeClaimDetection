@@ -92,6 +92,8 @@ def main():
 	relatedArticles = []
 	relatedSources= []
 	creds = []
+	claimX = None
+	relatedSnippetsX = None
 
 	RSExtractor = relatedSnippetsExtractor(overlapThreshold, glovePath=experimentPath+'glove')
 
@@ -117,7 +119,7 @@ def main():
 			claim, cred = readSnopes(filePath)
 			for article, source in zip(articles_, sources_):
 				_numArticle += 1
-				relatedSnippets_, _ = RSExtractor.extract(claim, article)
+				claimX_, relatedSnippetsX_, relatedSnippets_, _ = RSExtractor.extract(claim, article)
 
 				if relatedSnippets_ is not None:
 					#print (len(relatedSnippets_))
@@ -132,6 +134,12 @@ def main():
 
 					relatedSources.append(source)
 					creds.append(cred)
+					if (claimX is None):
+						claimX = claimX_
+						relatedSnippetsX = relatedSnippetsX_
+					else:
+						np.vstack((claimX, claimX_))
+						np.vstack((relatedSnippetsX, relatedSnippetsX_))
 				curArticleIdx += 1
 			curClaimIdx += 1
 
@@ -144,6 +152,8 @@ def main():
 				pickle.dump(relatedArticles, f)
 				pickle.dump(relatedSources, f)
 				pickle.dump(creds, f)
+				pickle.dump(claimX, f)
+				pickle.dump(relatedSnippetsX, f)
 				del articleSnippetIdx
 				del relatedSnippets
 				del claimArticleIdx
@@ -165,6 +175,8 @@ def main():
 		pickle.dump(relatedArticles, f)
 		pickle.dump(relatedSources, f)
 		pickle.dump(creds, f)
+		pickle.dump(claimX, f)
+		pickle.dump(relatedSnippetsX, f)
 		print (_numClaim, _numArticle)
 		f.close()
 	else:

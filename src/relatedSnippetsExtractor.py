@@ -117,15 +117,15 @@ class relatedSnippetsExtractor(object):
 
         #print (snippetsX.shape) 
         similarityScore = cosine_similarity(claimX, snippetsX)[0]
-        del claimX
-        del snippetsX
+        #del claimX
+        #del snippetsX
         # print (similarityScore)
         if (np.count_nonzero(similarityScore) == 0):
             # bad and weird thing happens 
-            return None, None
+            return None, None, None, None
         minSimilarityScore = np.max(similarityScore[np.nonzero(similarityScore)])
         if (minSimilarityScore < self.overlapThreshold):
-            return None, None
+            return None, None, None, None
         # print (minSimilarityScore)
         overlapIdx = np.where(similarityScore > self.overlapThreshold)[0]
         #print (overlapIdx)
@@ -135,6 +135,7 @@ class relatedSnippetsExtractor(object):
         #print (snippets)
 
         relatedSnippets = [''.join(snippet) for snippet in np.array(snippets)[overlapIdx].tolist()]
+        relatedSnippetsX = snippetsX[overlapIdx]
         del snippets
         # relatedSnippets = self._clean(relatedSnippets)
         relatedSnippetLabels = None
@@ -142,7 +143,7 @@ class relatedSnippetsExtractor(object):
             relatedSnippetLabels = [label for i in range(len(overlapIdx))]
             # return a list of related snippets (str)
             # corresponding to a claim and an article
-        return relatedSnippets, relatedSnippetLabels
+        return claimX, relatedSnippetsX , relatedSnippets, relatedSnippetLabels
         #print(relatedSnippets)
         #print(relatedSnippetLabels)
 

@@ -11,5 +11,4 @@ results/
 network/*.json
 network/Snopes/*
 article_extraction/
-new_article_extraction
 
