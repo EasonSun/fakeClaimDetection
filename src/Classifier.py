@@ -1,7 +1,7 @@
 import numpy as np
 import os 
 from sklearn.ensemble import RandomForestClassifier
-
+import io
 
 class Classifier(object):
 	"""docstring for Classifier"""
@@ -18,7 +18,7 @@ class Classifier(object):
 	def _printClass(self):
 		nunSample, numFeature = self.X.shape	
 		print("nunSample, numFeature: %i, %i" %(nunSample, numFeature))
-		logFile = open(self.logPath, 'a')
+		logFile = io.open(self.logPath, 'a')
 		logFile.write("nunSample, numFeature: %i, %i\n" %(nunSample, numFeature))
 		logFile.close()
 
@@ -57,18 +57,18 @@ class Classifier(object):
 
 		assert (importances.shape[0] == len(featureNames))
 		top10PercentIdx = np.argsort(importances)#[-int(numFeature*.1):]
-		topFeatureFile = open(topFeaturesPath, 'w')
+		topFeatureFile = io.open(topFeaturesPath, 'w')
 		for id in top10PercentIdx:
 			topFeatureFile.write(str(featureNames[id])+'\t'+str(importances[id])+'\n')
 		topFeatureFile.close()
 
 
 	def paramSearch(self, n_fold=5, sampleWeight=None):
-		logFile = open(self.logPath, 'a')
+		logFile = io.open(self.logPath, 'a')
 		print ('Start searching best parameters ...')
 		logFile.write('Start searching best parameters ... \n')
 		from sklearn.model_selection import GridSearchCV
-		grid = dict(max_depth=[300, 350])
+		grid = dict(max_depth=[self.rf.max_depth*(1+i) for i in np.arange(0,5,.5)])
 		# grid = dict(n_estimators=[500], max_depth=[2000])
 		rfGS = GridSearchCV(estimator=self.rf, param_grid=grid, cv=n_fold, n_jobs=2)
 		if (sampleWeight is not None):
@@ -94,7 +94,7 @@ class Classifier(object):
 
 
 	def crossValidate(self, n_fold=5, sourceCredByStance=None, claimArticleIdx=None, max_depth=None):
-		logFile = open(self.logPath, 'a')
+		logFile = io.open(self.logPath, 'a')
 
 		if (claimArticleIdx is None):
 			logFile.write('Per article evaluation\n')
@@ -160,7 +160,7 @@ class Classifier(object):
 		'''
 	'''
 	def weightedparamSearch(sourceCredn_fold=5):
-		logFile = open(self.logPath, 'w')
+		logFile = io.open(self.logPath, 'w')
 		from sklearn.model_selection import GridSearchCV
 		grid = dict(max_depth=[80, 90, 100])
 		# grid = dict(n_estimators=[500], max_depth=[2000])
@@ -188,7 +188,7 @@ class Classifier(object):
 		from sklearn.metrics import classification_report
 		result = classification_report(y_test, y_pred, target_names=['true', 'fake'])
 		print(result)
-		logFile = open(self.logPath, 'a')
+		logFile = io.open(self.logPath, 'a')
 		logFile.write(result)
 		logFile.close()
 
@@ -197,11 +197,11 @@ class Classifier(object):
 
 		wrongPrediction = []
 		correctPrediction = []
-		with open(origDataPath) as f:
+		with io.open(origDataPath) as f:
 			origData = f.readlines()
 			origData = np.array([x.strip() for x in origData])
 			wrongPrediction = origData[y_pred != y_test]
-		with open(self.experimentPath+'wrongPrediciton.txt', 'w') as f:
+		with io.open(self.experimentPath+'wrongPrediciton.txt', 'w') as f:
 			f.write('snippet'+'\t'+'prediciton'+'\t'+'label')
 			l = len(wrongPrediction)
 			for i in range(l):

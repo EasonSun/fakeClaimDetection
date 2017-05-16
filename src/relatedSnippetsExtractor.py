@@ -5,6 +5,9 @@ import os
 import pickle
 from sklearn.metrics.pairwise import cosine_similarity
 import time
+import io
+from gensim import models
+
 
 #from overlap_lsi import overlapping
 
@@ -27,21 +30,27 @@ symbols = re.compile(r'(\W+)', re.U)
 singles = re.compile(r'(\s\S\s)', re.I|re.U)
 # separators (any whitespace)
 seps = re.compile(r'\s+')
+
 alteos = re.compile(r'([!\?])')
 
 class relatedSnippetsExtractor(object):
     """docstring for ClassName"""
-    def __init__(self, overlapThreshold, glovePath=None):
+    def __init__(self, overlapThreshold, glovePath=None, doc2vecPath=None):
         self.overlapThreshold = overlapThreshold
         self.stopWords = []  
         try:
-            f = open("data/stopword.txt")
+            f = io.open("data/stopword.txt")
         except FileNotFoundError:
-            f = open("../data/stopword.txt")
+            f = io.open("../data/stopword.txt")
         self.stopWords = f.readlines()
         self.stopWords = [x.strip() for x in self.stopWords] 
         f.close()
-        self.glove = pickle.load(open(glovePath, 'rb'))
+        if glovePath is not None:
+            self.glove = pickle.load(io.open(glovePath, 'rb'))
+            self.doc2vec = None
+        if doc2vecPath is not None:
+            self.doc2vec = models.Doc2Vec.load(doc2vecPath)
+            self.glove = None
         print ("overlapThreshold = %f" %self.overlapThreshold)
 
 
@@ -61,65 +70,15 @@ class relatedSnippetsExtractor(object):
         # print (article)
         # print (claim)
         claim = self._cleanText(claim)
-        claimX = self._sentence2Glove(claim.split())
+        claimX = self._embed(claim.split())
+        claimX = claimX.reshape(1, claimX.size)
         snippets, snippetsX = self._extractSnippets(article)
-        # print (snippets)
-
-        '''
-        # you need to save by concat
-        sims = np(0)
-        if os.path.isfile('ldaSimScore.npy'):
-            sims = np.load('ldaSimScore.npy')
-        else:
-            _, sims = overlap(snippets, claim)
-            np.save('ldaSimScore.npy', sims)
-        '''
-
-        '''
-        # use lda to calculate similarity
-        _, sims = overlap(snippets, claim)
-        # print (sims)
-
-        overlapIdx = np.where(sims > self.overlapThreshold)[0]
-        #print (overlapIdx)
-        relatedSnippetLabels.extend([label for i in range(len(overlapIdx))])
-        snippets = np.array([[snippet] for snippet in snippets])
-        #print (snippets.shape)
-        # from vector back to sentence to later use them in the same feature space
-        relatedSnippet.extend([''.join(snippet) for snippet in snippets[overlapIdx].tolist()])
-        # relatedSnippetMarkNumbers.extend([snippetMarkNumbers[i] for i in overlapIdx])
-        # print(relatedSnippet)
-        #print(relatedSnippetLabels)
-        '''
-        
-        # find vocab for this pair so as to do vector similarity
-        '''
-        vectorizer.vocabulary = None
-        vocab = self._extractVocab([claim], snippets, vectorizer)
-        if len(vocab.keys()) == 0:
-            # bad thing can happen
-            return None, None 
-        # print (vocab)
-        vectorizer.vocabulary = vocab
-        assert(vectorizer.vocabulary == vocab)
-        claimX = vectorizer.fit_transform([claim])
-        assert(vectorizer.vocabulary == vocab)
-        claimX = claimX.toarray()
-        # print(claimX.shape)
-        # print(claimX[0][210])
-        snippetsX = vectorizer.fit_transform(snippets)
-        assert(vectorizer.vocabulary == vocab)
-        snippetsX = snippetsX.toarray()
-        # print(snippetsX.shape)
-        '''
-
-        #print (claimX.shape)
-
-        #print (snippetsX.shape) 
+        if (snippets == [] or snippetsX is None):
+            return None, None, None, None 
         similarityScore = cosine_similarity(claimX, snippetsX)[0]
         #del claimX
         #del snippetsX
-        # print (similarityScore)
+        #print (similarityScore)
         if (np.count_nonzero(similarityScore) == 0):
             # bad and weird thing happens 
             return None, None, None, None
@@ -133,8 +92,7 @@ class relatedSnippetsExtractor(object):
         #print (snippets.shape)
         # from vector back to sentence to later use them in the same feature space
         #print (snippets)
-
-        relatedSnippets = [''.join(snippet) for snippet in np.array(snippets)[overlapIdx].tolist()]
+        relatedSnippets = [' '.join(snippet) for snippet in np.array(snippets)[overlapIdx].tolist()]
         relatedSnippetsX = snippetsX[overlapIdx]
         del snippets
         # relatedSnippets = self._clean(relatedSnippets)
@@ -149,13 +107,46 @@ class relatedSnippetsExtractor(object):
 
 
     def _extractSnippets(self, article):
+        # a list of word list from a snippet
         snippets = []
         snippetsX = None
         # snippetMarkNumbers = []   #list of list, inner list records number of ! ? ""
-        NSS = 4 # number of a snippet in a sentence
+        # number of a snippet in a sentence
+        # should be the number to make stance classification best
+        # but best distribution happens at 3 for google crawled
+        NSS = 3 
 
         articleSentences = alteos.sub(r' \1 .', article).rstrip("(\.)*\n").split('.')
-        articleSentences = [sen for sen in articleSentences if len(sen.split())>3]
+        ctr = 0
+        snippet = ''
+        for sen in articleSentences:
+            if (len(sen.split())) > NSS:
+                sen = self._cleanText(sen)
+                if (len(sen.split())) > NSS:
+                    if ctr < NSS:
+                        snippet += (' ' + sen)
+                        ctr += 1
+
+            if ctr == NSS:
+                snippets.append(snippet.split())
+                if snippetsX is None:
+                    snippetsX = self._embed(snippet.split())
+                    snippetsX = snippetsX.reshape(1, snippetsX.size)
+                else:
+                    snippetsX = np.vstack((snippetsX, self._embed(snippet.split()))) 
+                ctr = 0
+                del snippet
+                snippet = ''
+        if ctr != 0:
+            snippets.append(snippet.split())
+            if snippetsX is None:
+                    snippetsX = self._embed(snippet.split())
+                    snippetsX = snippetsX.reshape(1, snippetsX.size)
+            else:
+                snippetsX = np.vstack((snippetsX, self._embed(snippet.split()))) 
+        del snippet
+        return snippets, snippetsX
+
         # articleSentences = re.split(r'[.|!|?]', article)
         
         '''
@@ -180,47 +171,6 @@ class relatedSnippetsExtractor(object):
         
         # no stripped kinda needed: like $100, "bill", these are critical
         # but vocab from the vectorizer is without these 
-        '''
-        t1 = time.clock()
-        while '' in articleSentences:
-            articleSentences.remove('')
-        t2 = time.clock()
-        print ('while')
-        print (t2-t1)
-        '''
-        
-        if (len(articleSentences) < NSS):
-            snippet = " ".join(articleSentences)
-            if snippetsX is None:
-                snippetsX = self._sentence2Glove(snippet.split())
-            else:
-                snippetsX = np.vstack((snippetsX, self._sentence2Glove(snippet)))   
-            return [snippet], snippetsX
-        for i in range(0, len(articleSentences) - NSS + 1, NSS):
-            temp = articleSentences[i : i+NSS]
-            snippet = ' '.join(temp)
-            snippet = self._cleanText(snippet)
-            snippets.append([snippet])
-
-            if snippetsX is None:
-                snippetsX = self._sentence2Glove(snippet.split())
-            else:
-                snippetsX = np.vstack((snippetsX, self._sentence2Glove(snippet)))   
-            # grab non overlapping snippets
-            '''
-            snippetMarkNumber = [0,0,0]
-            for j in range(NSS):
-                curSentence = articleSentencesWithMarks[i+j]
-                if '!' in curSentence:
-                    snippetMarkNumber[0] = 1
-                if '?' in curSentence:
-                    snippetMarkNumber[1] = 1
-                if '"' in curSentence:
-                    snippetMarkNumber[2] = 1
-
-            snippetMarkNumbers.append(snippetMarkNumber)
-            '''
-        return snippets, snippetsX
 
 
     def _extractVocab(self, claims, snippets, vectorizer):
@@ -324,19 +274,30 @@ class relatedSnippetsExtractor(object):
         text = seps.sub(' ', text)
         return text
 
-    def _sentence2Glove(self, sentence):
-        vec = np.zeros((1,200))
-        ctr = 0
-        for word in sentence:
-            if word in self.glove:
-                vec += self.glove[word]
-                ctr += 1
-        if ctr != 0:
-            return vec / ctr
+    # take in a list of words
+    def _embed(self, sentence):
+        if self.glove is not None:
+            vec = np.zeros((1,200))
+            ctr = 0
+            for word in sentence:
+                if word in self.glove:
+                    vec += self.glove[word]
+                    ctr += 1
+            if ctr != 0:
+                return vec / ctr
+            else:
+                return vec
+
+        elif self.doc2vec is not None:
+            # defined by that paper
+            start_alpha=0.01
+            infer_epoch=1000
+            # shape: (300,)
+            return self.doc2vec.infer_vector(sentence, alpha=start_alpha, steps=infer_epoch)
+
         else:
-            return vec
-
-
+            #BoW goes here!
+            pass
 
 
 

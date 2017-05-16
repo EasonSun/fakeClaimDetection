@@ -1,12 +1,13 @@
 import numpy as np
 import os
+import io
 
 class lgExtractor(object):
     def __init__(self, lgPath):
         # to be used as the vocab of vectorizer
         lgFeatures = {}
         nextValue = 0
-        with open(lgPath) as f:
+        with io.open(lgPath) as f:
             for lgFeature in f:
                 lgFeature = lgFeature.rstrip()
                 if lgFeature not in lgFeatures:

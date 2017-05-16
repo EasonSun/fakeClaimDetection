@@ -3,20 +3,22 @@ import os
 import re
 import sys
 import time
+import io
+
 from Classifier import Classifier
+from StanceReader import StanceReader
 from relatedSnippetsExtractor import relatedSnippetsExtractor
 from lgExtractor import lgExtractor
 
 
 experimentPath = sys.argv[1]
-claimPath = experimentPath + 'claims.txt'
-articlePath = experimentPath + 'articles.txt'
-stancePath = experimentPath + 'stance.npy'
-relatedSnippetsPath = experimentPath + 'stance/relatedSnippets.txt'
-relatedSnippetLabelsPath = experimentPath + 'stance/relatedSnippetLabels.npy'
 
-relatedSnippetXPath = experimentPath + 'stance/relatedSnippetX'
-relatedSnippet_yPath = experimentPath + 'stance/relatedSnippet_y'
+relatedSnippetsPath = experimentPath + 'stance/relatedSnippets.txt'
+relatedSnippetLabelsPath = experimentPath + 'stance/relatedSnippetLabel'
+claimXPath = experimentPath + 'stance/claimX'
+relatedSnippetsXPath = experimentPath + 'stance/relatedSnippetX'
+
+
 featureNamePath = experimentPath + 'stance/featureName'
 wrongPredicitonPath = experimentPath + 'stance/wrongPrediciton.txt'
 logPath = experimentPath + 'log.txt'
@@ -25,97 +27,124 @@ MIN_DF = float(sys.argv[2])
 MAX_DF = float(sys.argv[3])
 overlapThreshold = float(sys.argv[4])
 
+snopeDataPath = sys.argv[5]
+doc2vecPath = sys.argv[6]
+
 lgPath = "data/linguisticFeatures/allFeatures.txt"
 
-	
-def main():
-	print ('start stance evaluation ...')
-	claims = []
-	with open(claimPath) as f:
-	    claims = f.readlines()
-	claims = [x.strip() for x in claims] 
+reader = StanceReader(snopeDataPath)
+rsExtractor = relatedSnippetsExtractor(overlapThreshold, doc2vecPath=doc2vecPath)
 
-	articles = []
-	with open(articlePath) as f:
-	    articles = f.readlines()
-	articles = [x.strip() for x in articles]
-	articleLabels = np.load(stancePath)
+# no need of parellel
+def read(relatedSnippets, relatedSnippetLabels, claimX, relatedSnippetsX):
+	for filePath in os.listdir(snopeDataPath):
+		if not filePath.endswith('.json'):
+			continue
+		claim, article, cred = reader.readSnopes(filePath)
+		if (claim == 'the name of the san diego wild animal parks monorail was taken from crude acronym'):
+			print filePath
+		if claim is None:
+			continue
+		#t1 = time.clock()
+		claimX_, relatedSnippetsX_, relatedSnippets_, relatedSnippetLabels_ = rsExtractor.extract(claim, article, label=cred)
+		#t2 = time.clock()
+		#print (t2-t1)
+		if relatedSnippets_ is not None:
+			if claimX is None:
+				claimX = claimX_
+				relatedSnippetsX = relatedSnippetsX_
+			else:
+				np.vstack((claimX, claimX_))
+				try:
+					np.vstack((relatedSnippetsX, relatedSnippetsX_))
+				except ValueError:
+					print (relatedSnippetsX_.shape, relatedSnippetsX.shape)
+					print (filePath)
+					break
+			relatedSnippets.extend(relatedSnippets_)
+			relatedSnippetLabels.extend(relatedSnippetLabels_)
+		
+	print (relatedSnippetsX.shape)
 
-	relatedSnippets = []
-	relatedSnippetLabels = []
+	with io.open(relatedSnippetsPath, 'w') as f:
+		for item in relatedSnippets:
+			f.write(item + '\n')
+	np.save(claimXPath, claimX)
+	np.save(relatedSnippetsXPath, relatedSnippetsX)
+	relatedSnippetLabels = np.array(relatedSnippetLabels)
+	np.save(relatedSnippetLabels, relatedSnippetLabelsPath)
 
-	extractor = relatedSnippetsExtractor(overlapThreshold)
-
-	if not os.path.isfile(relatedSnippetsPath):
-		for claim, article, articleLabel in zip(claims, articles, articleLabels):
-			relatedSnippets_, relatedSnippetLabels_ = extractor.extract(claim, article, articleLabel)
-			if relatedSnippets_ is not None:
-				relatedSnippets.extend(relatedSnippets_)
-				relatedSnippetLabels.extend(relatedSnippetLabels_)
-
-		with open(relatedSnippetsPath, 'w') as f:
-			for item in relatedSnippets:
-				f.write(item + '\n')
-		np.save(relatedSnippetLabelsPath, np.array(relatedSnippetLabels))
-
-		# can be renamed to stanceRelatedSnippetsPath
-		# that means save two versions of RelatedSnippets, one for stance one for 	claim classification
-		# but maybe no need to do that
-
-	else:
-		with open(relatedSnippetsPath) as f:
-		    relatedSnippets = f.readlines()
-		relatedSnippets = [x.strip() for x in relatedSnippets]
-		relatedSnippetLabels = np.load(relatedSnippetLabelsPath)
-		#the above line does not make sense?
 	print ('finish related snippets extraction')
 	ratioImbalance = np.sum(relatedSnippetLabels) / (relatedSnippetLabels.shape - np.sum(relatedSnippetLabels))
 	print ('ratio of imbalance, neg : pos is %4f' %ratioImbalance)
 	print("MIN_DF = %f" %MIN_DF)
 	print("MAX_DF = %f" %MAX_DF)
 
-	logFile = open(logPath, 'a')
+	logFile = io.open(logPath, 'a')
 	logFile.write ('ratio of imbalance, neg : pos is  %4f \n' %ratioImbalance)
 	logFile.write("MIN_DF = %f \n" %MIN_DF)
 	logFile.write("MAX_DF = %f \n" %MAX_DF)
 	logFile.close()
 
 
-	relatedSnippetX = np.array(0)
+	
+def main():
+	print ('start stance evaluation ...')
+	'''
+	claims = []
+	articles = []
+	creds = []
+	'''
+	relatedSnippets = []
+	relatedSnippetLabels = []
+	claimX = None
+	relatedSnippetsX = None
+
+	if not os.path.isfile(relatedSnippetsXPath+'.npy'):
+		read(relatedSnippets, relatedSnippetLabels, claimX, relatedSnippetsX)
+		# relatedSnippetLabels = np.array(relatedSnippetLabels)
+	else:
+		with io.open(relatedSnippetsPath) as f:
+			relatedSnippets = f.readlines()
+			print(relatedSnippets[0])
+		claimX = np.load(claimXPath + '.npy')
+		relatedSnippetsX = np.load(relatedSnippetsXPath + '.npy')
+		relatedSnippetLabels = np.load(relatedSnippetLabelsPath + '.npy')
+
 	relatedSnippet_y = np.array(0)
 	featureNames = []
-
-	if not os.path.isfile(relatedSnippetXPath+'.npy'):
-		'''
-		relatedSnippetX, featureNames = extractor.extractFeatures(relatedSnippets, MIN_DF, MAX_DF)
+	'''
+	if not os.path.isfile(relatedSnippetsXPath+'.npy'):
+		
+		relatedSnippetsX, featureNames = extractor.extractFeatures(relatedSnippets, MIN_DF, MAX_DF)
 		relatedSnippet_y = np.array(relatedSnippetLabels)
-		np.save(relatedSnippetXPath, relatedSnippetX)
+		np.save(relatedSnippetsXPath, relatedSnippetsX)
 		np.save(relatedSnippet_yPath, relatedSnippet_y)
 		np.save(featureNamePath, np.array(featureNames))
-		'''
+		
 		LGExtractor = lgExtractor(lgPath)
-		relatedSnippetX, featureNames = LGExtractor.extract(relatedSnippets)
+		relatedSnippetsX, featureNames = LGExtractor.extract(relatedSnippets)
 		relatedSnippet_y = np.array(relatedSnippetLabels)
-		np.save(relatedSnippetXPath, relatedSnippetX)
+		np.save(relatedSnippetsXPath, relatedSnippetsX)
 		np.save(relatedSnippet_yPath, relatedSnippet_y)
 		np.save(featureNamePath, featureNames)
 
 	else:
 		try:
-			relatedSnippetX = np.load((relatedSnippetXPath + '.npy')).item()
+			relatedSnippetsX = np.load((relatedSnippetsXPath + '.npy')).item()
 		except:
-			relatedSnippetX = np.load((relatedSnippetXPath + '.npy'))
+			relatedSnippetsX = np.load((relatedSnippetsXPath + '.npy'))
 		try:
 			relatedSnippet_y = np.load(relatedSnippet_yPath + '.npy').item()
 		except:
 			relatedSnippet_y = np.load(relatedSnippet_yPath + '.npy')
 		featureNames = np.load(featureNamePath+'.npy')
-
+	'''
 	print ('start classifying')
-	clf = Classifier(relatedSnippetX, 'stance', logPath, experimentPath, relatedSnippet_y)
+	clf = Classifier(relatedSnippetsX, 'stance', logPath, experimentPath, y=relatedSnippetLabels)
 	
-	clf.evaluateFeatureImportance(featureNames, max_depth=30)
-	# clf.paramSearch()
+	# clf.evaluateFeatureImportance(featureNames, max_depth=30)
+	clf.paramSearch()
 	clf.crossValidate(max_depth=300, n_fold=10)
 	# clf.crossValidate(max_depth=80)
 	'''
@@ -128,13 +157,13 @@ def main():
 
 	'''
 	# concat ! ? " marks 
-	relatedSnippetX = np.concatenate((relatedSnippetX, relatedSnippetMarkNumberX), axis=1)
+	relatedSnippetsX = np.concatenate((relatedSnippetsX, relatedSnippetMarkNumberX), axis=1)
 	from sklearn.ensemble import RandomForestClassifier
 	forest = RandomForestClassifier(max_features='sqrt')
 	from sklearn.model_selection import GridSearchCV
 	grid = dict(n_estimators=[500], max_depth=[2000])
 	forestGS = GridSearchCV(estimator=forest, param_grid=grid, cv=5)
-	forestGS.fit(relatedSnippetX, relatedSnippet_y)
+	forestGS.fit(relatedSnippetsX, relatedSnippet_y)
 
 	means = forestGS.cv_results_['mean_test_score']
 	stds = forestGS.cv_results_['std_test_score']

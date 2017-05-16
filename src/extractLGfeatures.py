@@ -1,22 +1,23 @@
 import os
 import sys 
+import io
 
 def extractLGfeatures(claims, lgFeaturesPath):
 	allFeaturePath = os.path.join(lgFeaturesPath, 'allFeatures.txt')
 	if not (os.path.isfile(allFeaturePath)):
 		print ("Creating file allFeatures.txt to group all linguistic features")
-		afFile = open(allFeaturePath, 'w')
+		afFile = io.open(allFeaturePath, 'w')
 		for filePath in os.listdir(lgFeaturesPath):
 			#print filePath
 			if filePath != 'allFeatures.txt' and filePath.endswith('.txt'):
 				print (filePath)
-				curFile = open(os.path.join(lgFeaturesPath, filePath), 'r', encoding='utf-8', errors='ignore')
+				curFile = io.open(os.path.join(lgFeaturesPath, filePath), 'r', encoding='utf-8', errors='ignore')
 				writeAFFile(afFile, curFile)
 				curFile.close()
 		afFile.close()
 	
 
-	afFile = open(allFeaturePath, 'r')
+	afFile = io.open(allFeaturePath, 'r')
 	allFeatures = set(afFile.read().split())
 	print (len(allFeatures))
 	afFile.close()

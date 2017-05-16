@@ -4,6 +4,8 @@ import re
 import sys
 import time
 import json
+import io
+
 import _pickle as pickle
 from Classifier import Classifier
 from relatedSnippetsExtractor import relatedSnippetsExtractor
@@ -20,20 +22,6 @@ overlapThreshold = float(sys.argv[4])
 lgPath = sys.argv[5]
 snopeDataPath = sys.argv[6]
 googleDataPath = sys.argv[7]
-
-def readSnopes(filePath):
-	filePath = os.path.join(snopeDataPath, filePath)
-	data = json.load(open(filePath, 'r', encoding='utf-8', errors='ignore'))
-	if data['Credibility'] in ['true', 'mostly true']:
-		return data['Claim'], 0# for
-	elif data['Credibility'] in ['false', 'mostly false']: 
-		return data['Claim'], 1
-
-
-def readGoogle(filePath):
-	filePath = os.path.join(googleDataPath, filePath)
-	data = json.load(open(filePath, 'r', encoding='utf-8', errors='ignore'))
-	return data['article'], data['source']
 
 
 '''
@@ -66,7 +54,7 @@ def evaluateSourceCred(sources, stanceByArticle, cred):
 
 
 def main():
-	#logFile = open(logPath, 'a')
+	#logFile = io.open(logPath, 'a')
 	'''
 	read articles and source 
 	'''
@@ -95,7 +83,8 @@ def main():
 	claimX = None
 	relatedSnippetsX = None
 
-	RSExtractor = relatedSnippetsExtractor(overlapThreshold, glovePath=experimentPath+'glove')
+	reader = ClaimReader(snopeDataPath, googleDataPath)
+	rsExtractor = RelatedSnippetsExtractor(overlapThreshold, glovePath=experimentPath+'glove')
 
 	curClaimIdx = 0
 	curArticleIdx = 0
@@ -115,11 +104,14 @@ def main():
 			_numClaim += 1
 			if not filePath.endswith('.json'):
 				continue
-			articles_, sources_ = readGoogle(filePath)
-			claim, cred = readSnopes(filePath)
+			articles_, sources_ = reader.readGoogle(filePath)
+			claim, cred = reader.readSnopes(filePath)
 			for article, source in zip(articles_, sources_):
 				_numArticle += 1
-				claimX_, relatedSnippetsX_, relatedSnippets_, _ = RSExtractor.extract(claim, article)
+				t1 = time.clock()
+				claimX_, relatedSnippetsX_, relatedSnippets_, _ = rsExtractor.extract(claim, article)
+				t2 = time.clock()
+				print (t2-t1)
 
 				if relatedSnippets_ is not None:
 					#print (len(relatedSnippets_))
@@ -145,7 +137,7 @@ def main():
 
 			if i!=0 and i%500 == 0:
 				print (i)
-				f = open(everythingPath+str(i), 'wb')
+				f = io.open(everythingPath+str(i), 'wb')
 				pickle.dump(articleSnippetIdx, f)
 				pickle.dump(relatedSnippets, f)
 				pickle.dump(claimArticleIdx, f)
@@ -168,7 +160,7 @@ def main():
 				creds = []
 				f.close()
 
-		f = open(everythingPath, 'wb')
+		f = io.open(everythingPath, 'wb')
 		pickle.dump(articleSnippetIdx, f)
 		pickle.dump(relatedSnippets, f)
 		pickle.dump(claimArticleIdx, f)
@@ -181,7 +173,7 @@ def main():
 		f.close()
 	else:
 		print ('loading data')
-		f = open(everythingPath, 'rb')
+		f = io.open(everythingPath, 'rb')
 		articleSnippetIdx = pickle.load(f)
 		relatedSnippets = pickle.load(f)
 		claimArticleIdx = pickle.load(f)

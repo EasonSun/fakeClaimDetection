@@ -3,6 +3,7 @@ import os
 import gc
 import re
 import sys
+import io
 sys.path.append('src/') # This line is added because otherwise it will show ModuleNotFound error
 import time
 import json
@@ -26,7 +27,7 @@ googleDataPath = sys.argv[7]
 
 def readSnopes(filePath):
 	filePath = os.path.join(snopeDataPath, filePath)
-	data = json.load(open(filePath, 'r', encoding='utf-8', errors='ignore'))
+	data = json.load(io.open(filePath, 'r', encoding='utf-8', errors='ignore'))
 	if data['Credibility'] in ['true', 'mostly true']:
 		return data['Claim'], 0# for
 	elif data['Credibility'] in ['false', 'mostly false']: 
@@ -35,7 +36,7 @@ def readSnopes(filePath):
 
 def readGoogle(filePath):
 	filePath = os.path.join(googleDataPath, filePath)
-	data = json.load(open(filePath, 'r', encoding='utf-8', errors='ignore'))
+	data = json.load(io.open(filePath, 'r', encoding='utf-8', errors='ignore'))
 	return data['article'], data['source']
 
 
@@ -68,7 +69,7 @@ def evaluateSourceCred(sources, stanceByArticle, cred):
 	return sourceCred, sourceCred4Training
 
 def main():
-	#logFile = open(logPath, 'a')
+	#logFile = io.open(logPath, 'a')
 	'''
 	read articles and source 
 	'''
@@ -147,7 +148,7 @@ def main():
 			# 
 			if _numClaim % groupSize == 0:
 				
-				f = open(everythingPath+str(_numClaim), 'wb')
+				f = io.open(everythingPath+str(_numClaim), 'wb')
 				pickle.dump(articleSnippetIdx, f)
 				pickle.dump(relatedSnippets, f)
 				pickle.dump(claimArticleIdx, f)
@@ -173,7 +174,7 @@ def main():
 				print (_numClaim, _numArticle)
 	else:
 		print ('loading data')
-		f = open(everythingPath, 'rb')
+		f = io.open(everythingPath, 'rb')
 		articleSnippetIdx = pickle.load(f)
 		relatedSnippets = pickle.load(f)
 		claimArticleIdx = pickle.load(f)

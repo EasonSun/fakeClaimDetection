@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+import io
 
 if __name__ == "__main__":
     AGGREGATE_RESULTS_FOLDER = 'aggregate_results_groups'
@@ -11,7 +12,7 @@ if __name__ == "__main__":
         if not os.path.exists(AGGREGATE_RESULTS_FOLDER):
             os.makedirs(AGGREGATE_RESULTS_FOLDER)
 
-        with open(sys.argv[1], 'r') as file:
+        with io.open(sys.argv[1], 'r') as file:
             claim_urls = json.load(file)
         group_id = 1
         tmp_data = []
@@ -19,7 +20,7 @@ if __name__ == "__main__":
         for idx, claim_url in enumerate(claim_urls):
             if count % 15 == 0 and count != 0:
                 print len(tmp_data)
-                with open(AGGREGATE_RESULTS_FOLDER+"/"+str(group_id)+"_"+AGGREGATE_RESULTS_SUFFIX, 'w') as file:
+                with io.open(AGGREGATE_RESULTS_FOLDER+"/"+str(group_id)+"_"+AGGREGATE_RESULTS_SUFFIX, 'w') as file:
                     json.dump(tmp_data, file, indent=2)
                 group_id += 1
                 tmp_data = []
@@ -27,7 +28,7 @@ if __name__ == "__main__":
             count += 1
 
         # Store the rest
-        with open(AGGREGATE_RESULTS_FOLDER + "/" + str(group_id) + "_" + AGGREGATE_RESULTS_SUFFIX, 'w') as file:
+        with io.open(AGGREGATE_RESULTS_FOLDER + "/" + str(group_id) + "_" + AGGREGATE_RESULTS_SUFFIX, 'w') as file:
             print len(tmp_data)
             json.dump(tmp_data, file, indent=2)
 

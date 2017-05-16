@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+import io
 
 if __name__ =="__main__":
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -29,7 +30,7 @@ if __name__ =="__main__":
 
         for id in range(lower_group_id, higher_group_id+1):
             results = []
-            with open(AGGREGATE_RESULTS_FOLDER+"/"+str(id)+"_"+AGGREGATE_RESULTS_SUFFIX, 'r') as file:
+            with io.open(AGGREGATE_RESULTS_FOLDER+"/"+str(id)+"_"+AGGREGATE_RESULTS_SUFFIX, 'r') as file:
                 results = json.load(file)
             for result in results:
                 subprocess.call(["scrapy", "runspider", "-a", "aggregate_results_file=" + aggregate_results_file,
