@@ -1,10 +1,14 @@
+import os
+import numpy as np
+
 import ctypes
 import logging
 import multiprocessing as mp
 
 from contextlib import closing
 
-import numpy as np
+from src.ClaimReader import ClaimReader
+
 
 
 googleDataPath="data/Google_test"
@@ -28,6 +32,7 @@ def main():
     arr[:] = np.random.uniform(size=N)
     arr_orig = arr.copy()
     '''
+
     shared_claimX = mp.Array(ctypes.c_double, 1)
     shared_relatedSnippetsX = mp.Array(ctypes.c_double, 1)
     # write to arr from different processes
@@ -42,7 +47,10 @@ def main():
         step = N // 10
         p.map_async(g, [slice(i, i + step) for i in range(stop_f, N, step)])
         '''
+        p.map(readFile_synced, [i for i in range(10)])
     p.join()
+    print (tonumpyarray(shared_claimX).shape)
+
     #assert np.allclose(((-1)**M)*tonumpyarray(shared_arr), arr_orig)
 
 def init(claimX_, relatedSnippetsX_):
@@ -70,23 +78,37 @@ def g(i):
     arr[i] = -1 * arr[i]
     info("end   %s" % (i,))
 
-def read(i):
-    filePath = filePaths[i]
-    articles_, sources_ = reader.readGoogle(filePath)
-    claim, cred = reader.readSnopes(filePath)
+def readFile_synced(i):
+    # synchronize access
+    with shared_claimX.get_lock() and shared_relatedSnippetsX.get_lock(): 
+        readFile(i)
+
+def readFile(i):
+    info("start %s" % (i,))
+
     claimX = tonumpyarray(shared_claimX)
     relatedSnippetsX = tonumpyarray(shared_relatedSnippetsX)
+
+    filePath = filePaths[i]
+    if not filePath.endswith('.json'):
+        return 
+    articles_, sources_ = reader.readGoogle(filePath)
+    claim, cred = reader.readSnopes(filePath)
+
     for article, source in zip(articles_, sources_):
         claimX_ = np.ones((1,300))
-        relatedSnippetsX_ = np.ones((1,300))
+        relatedSnippetsX_ = np.ones((5,300))
         #claimX_, relatedSnippetsX_, relatedSnippets_, _ = rsExtractor.extract(claim, article)
-        if relatedSnippets_ is not None:
-            if (claimX is None):
-                claimX = claimX_
-                relatedSnippetsX = relatedSnippetsX_
-            else:
-                np.vstack((claimX, claimX_))
-                np.vstack((relatedSnippetsX, relatedSnippetsX_))
+        if (claimX.size == 1):
+            claimX = claimX_.reshape(claimX_.size)
+            relatedSnippetsX = relatedSnippetsX_.reshape(relatedSnippetsX_.size)
+        else:
+            claimX = np.append(claimX, claimX_)
+            relatedSnippetsX = np.append(relatedSnippetsX, relatedSnippetsX_)
+
+    info("end   %s" % (i,))
+
+
 
 
 if __name__ == '__main__':

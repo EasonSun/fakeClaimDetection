@@ -1,1 +1,0 @@
-magebi = "The official versions of the story lack the legendary element that 'Wgasa' was mistakenly adopted as a name by people who had no idea what it meant (as Chuck Faust said, \"everybody laughed because they knew what it stood for\"), but by all available evidence, the gist of this tale is true."

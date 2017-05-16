@@ -6,7 +6,7 @@ import pickle
 import io
 
 
-class reader(object):
+class ClaimReader(object):
 	"""docstring for reader"""
 	def __init__(self, snopeDataPath, googleDataPath):
 		self.snopeDataPath = snopeDataPath
