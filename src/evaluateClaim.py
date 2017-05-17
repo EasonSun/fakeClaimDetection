@@ -4,6 +4,7 @@ import sys
 import time
 import json
 import io
+import heapq
 from multiprocessing import Pool, Manager
 
 import pickle
@@ -43,7 +44,6 @@ reader = ClaimReader(snopeDataPath, googleDataPath)
 rsExtractor = relatedSnippetsExtractor(overlapThreshold, doc2vecPath=doc2vecPath)
 stanceClf = Classifier('stance', logPath, experimentPath)
 
-import heapq
 
 class topK(object):
 	# @param {int} k an integer
@@ -69,7 +69,7 @@ class topK(object):
 		return sorted(self.nums, reverse=True)
 
 	def avg(self):
-		return sum(self.nums)
+		return sum(self.nums) / len(self.nums)
 
 
 class Review(object):
@@ -112,9 +112,7 @@ def updateSource(articlesScore, source, cred):
 			sourceMatrix[source][3] += 1
 
 
-def buildReviewHelper(filePath):
-	articles, sources = reader.readGoogle(filePath)
-	claim, cred = reader.readSnopes(filePath)
+def buildReviewHelper(articles, sources, claim, cred=None):
 	if claim is None:
 		return
 	review = Review(claim, cred)
@@ -127,17 +125,21 @@ def buildReviewHelper(filePath):
 	negStanceScores = []
 	posTKrelatedSnippets = []
 	negTKrelatedSnippets = []
-	#
+	
 	for article, source in zip(articles, sources):
 		_, relatedSnippetsX_, relatedSnippets_, _, overlapScores_ = rsExtractor.extract(claim, article)
 		# can be many other edge cases
 		if relatedSnippets_ is not None:
+			posTK3 = topK(3)
+			negTK3 = topK(3)
 			stanceProb_ = stanceClf.predict_porb(relatedSnippetsX_)
 			del relatedSnippetsX_
 			stanceScore_ = stanceProb_ * overlapScores_
 			posTK10.add(stanceScore_[:,0])
 			negTK10.add(stanceScore_[:,1])
-			articlesScore.append((posTK10.avg(), negTK10.avg()))
+			posTK3.add(stanceScore_[:,0])
+			negTK3.add(stanceScore_[:,1])
+			articlesScore.append((posTK3.avg(), negTK3.avg()))
 			updateSource ((posTK10.avg(), negTK10.avg()), source, cred)
 			relatedSnippets.extend(relatedSnippets_)
 			del relatedSnippets_
@@ -150,7 +152,20 @@ def buildReviewHelper(filePath):
 	for score in negTK10.nums:
 		negTKrelatedSnippets.append(relatedSnippets[negStanceScores.index(score)])
 	review.addSnippets(posTKrelatedSnippets, negTKrelatedSnippets)
-	# print (posTKrelatedSnippets)
+	'''
+	### CHEAT ###
+	posScore = sum([score[0] for score in articlesScore])
+	negScore = sum([score[1] for score in articlesScore])
+	score = max(2.4*posScore, negScore) / len(articlesScore)
+	# pos
+	print (claim)
+	if (2.4*posScore > negScore):
+		print ('label: '+str(cred)+' predict: '+'0'+' confidence: '+str(score))
+		print (posTKrelatedSnippets) 
+	else:
+		print ('label: '+str(cred)+' predict: '+'1'+' confidence: '+str(score))
+		print (negTKrelatedSnippets) 
+	'''
 	reviews.append(review)
 
 
@@ -159,7 +174,9 @@ def buildReview(i):
 	if filePath == '.DS_Store':
 		return
 	print(filePath)
-	buildReviewHelper(filePath)
+	articles, sources = reader.readGoogle(filePath)
+	claim, cred = reader.readSnopes(filePath)
+	buildReviewHelper(articles, sources, claim, cred)
 
 
 def main():

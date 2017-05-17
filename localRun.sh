@@ -1,6 +1,6 @@
 #!/bin/bash
 snopeDataPath="data/Snopes"
-googleDataPath="data/Google_processed"
+googleDataPath="data/Google_test"
 glovePath="data/glove/glove.6B.200d.txt"
 doc2vecPath='data/doc2vec_apnews.bin'
 lgPath="data/linguisticFeatures/allFeatures.txt"
@@ -27,4 +27,4 @@ echo overlapThreshold >> experimentLogPath
 ### python src/evaluateStance.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold $snopeDataPath $doc2vecPath
 ### evaluate claim credibility
 overlapThreshold=".55"
-python src/evaluateClaim.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold $lgPath $snopeDataPath $googleDataPath $doc2vecPath 2 4
+python src/evaluateClaim.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold $lgPath $snopeDataPath $googleDataPath $doc2vecPath 0 6
