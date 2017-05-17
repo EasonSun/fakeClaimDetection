@@ -107,7 +107,7 @@ def count(snippetLenDist3, snippetLenDist4):
 
 t1 = time.time()
 pool = Pool(processes=4)
-pool.starmap(count, [(i,) for i in range(len(filePaths))])
+#pool.starmap(count, [(i,) for i in range(len(filePaths))])
 t2 = time.time()
 print (t2-t1)
 
@@ -160,17 +160,18 @@ print (t2-t1)
 
 def stat(dist):
 	dist = eval(dist)
-	summ = 0
+	wordSum = 0
 	count = 0
 	maxArticleCount = 0
 	for key in dist.keys():
 		if dist[key] > maxArticleCount:
 			maxArticleCount = dist[key]
-		summ += dist[key]*key
+		wordSum += dist[key]*key
 		count += dist[key]
-	print (summ)
+	print (wordSum)
 	print ('average')
-	print (summ/count)
+	print (wordSum/count)
 	print (maxArticleCount)
+	print (count)
 
 stat('snippetLenDist3')

@@ -1,19 +1,22 @@
 import numpy as np
 import os
-import re
 import sys
 import time
 import json
 import io
+from multiprocessing import Pool, Manager
 
-import _pickle as pickle
+import pickle
 from Classifier import Classifier
 from relatedSnippetsExtractor import relatedSnippetsExtractor
 from lgExtractor import lgExtractor
+from ClaimReader import ClaimReader
+
 
 experimentPath = sys.argv[1]
 logPath = experimentPath + 'log.txt'
-sourcePath = experimentPath + 'source.npy'
+sourcePath = experimentPath + 'sourceMatrix_' + sys.argv[9] + '_' + sys.argv[10]
+reviewPath = experimentPath + 'reviews_' + sys.argv[9] + '_' + sys.argv[10]
 
 MIN_DF = float(sys.argv[2])
 MAX_DF = float(sys.argv[3])
@@ -22,228 +25,169 @@ overlapThreshold = float(sys.argv[4])
 lgPath = sys.argv[5]
 snopeDataPath = sys.argv[6]
 googleDataPath = sys.argv[7]
+doc2vecPath = sys.argv[8]
 
 
+filePaths = os.listdir(googleDataPath)
+global reviews
+global sourceMatrix
 '''
-sourceCred
-shape: numArticle, 4
-value at each cell: float
-oppose true | Support false | support true | oppose false 
+manager = Manager()
+reviews = manager.list()
+sourceMatrix = manager.dict()
 '''
-def evaluateSourceCred(sources, stanceByArticle, cred):
-	lc = len(source)
-	sourceCred = np.zeros((len(source),4))
-	for i in range(lc):	
-		stance = stanceByArticle[i]
-		cred_i = cred[i]
-		q = stance&cred_i
-		s = 2*q+cred_i
-		# change this to numpy
-		all_index = [idx for idx in range(len(source)) if source[idx] == source[i]]
-		sourceCred[all_index, s] = sourceCred[all_index, s] + 1
-	sourceCred4Training = np.zeros((len(source), 1))
-	for i in range(lc):
-		stance = stanceByArticle[i]
-		cred_i = cred[i]
-		q = stance&cred_i
-		s = 2*q+cred_i
-		sourceCred4Training[i] = sourceCred[i,s]
+reviews = list()
+sourceMatrix = dict()
 
-	# print(sourceCred)
-	return sourceCred, sourceCred4Training
+reader = ClaimReader(snopeDataPath, googleDataPath)
+rsExtractor = relatedSnippetsExtractor(overlapThreshold, doc2vecPath=doc2vecPath)
+stanceClf = Classifier('stance', logPath, experimentPath)
+
+import heapq
+
+class topK(object):
+	# @param {int} k an integer
+	def __init__(self, k):
+		self.k = k
+		self.nums = []
+		heapq.heapify(self.nums)
+		self.newAdd = None
+
+	# @param {int} num an integer
+	def add(self, nums):
+		nums = list(nums)
+		for num in nums:
+			if len(self.nums) < self.k:
+				heapq.heappush(self.nums, num)
+			elif num > self.nums[0]:
+				heapq.heappop(self.nums)
+				heapq.heappush(self.nums, num)
+		self.newAdd = set(self.nums).intersection(nums)
+
+	# @return {int[]} the top k largest numbers in array
+	def topk(self):
+		return sorted(self.nums, reverse=True)
+
+	def avg(self):
+		return sum(self.nums)
+
+
+class Review(object):
+	"""docstring for ClassName"""
+	def __init__(self, claim, label):
+		# number of claims
+		self.claim = claim
+		self.label = label
+
+	def addSnippets(self,  posTKrelatedSnippets, negTKrelatedSnippets):
+		# top 10
+		self.posTKrelatedSnippets = posTKrelatedSnippets
+		self.negTKrelatedSnippets = negTKrelatedSnippets
+		#self.snippetsScore = snippetsScore
+
+	def addArticles(self, articlesScore, source):
+		# number of articles
+		self.articlesScore = articlesScore
+		self.source = source
+
+# sourceMatrix
+# {source: (#support true, #support false, #refute true, #refute false)}
+def updateSource(articlesScore, source, cred):
+	if source not in sourceMatrix:
+		# smoothing
+		sourceMatrix[source] = [1,1,1,1]
+	#print (cred)
+	#print (articlesScore)
+	# support
+	if articlesScore[0]*2.4 > articlesScore[1]:
+		# true
+		if cred == 0:
+			sourceMatrix[source][0] += 1
+		else:
+			sourceMatrix[source][1] += 1
+	else:
+		if cred == 0:
+			sourceMatrix[source][2] += 1
+		else:
+			sourceMatrix[source][3] += 1
+
+
+def buildReviewHelper(filePath):
+	articles, sources = reader.readGoogle(filePath)
+	claim, cred = reader.readSnopes(filePath)
+	if claim is None:
+		return
+	review = Review(claim, cred)
+	posTK10 = topK(10)
+	negTK10 = topK(10)
+	articlesScore = []
+	# book keeping to  
+	relatedSnippets = []
+	posStanceScores = []
+	negStanceScores = []
+	posTKrelatedSnippets = []
+	negTKrelatedSnippets = []
+	#
+	for article, source in zip(articles, sources):
+		_, relatedSnippetsX_, relatedSnippets_, _, overlapScores_ = rsExtractor.extract(claim, article)
+		# can be many other edge cases
+		if relatedSnippets_ is not None:
+			stanceProb_ = stanceClf.predict_porb(relatedSnippetsX_)
+			del relatedSnippetsX_
+			stanceScore_ = stanceProb_ * overlapScores_
+			posTK10.add(stanceScore_[:,0])
+			negTK10.add(stanceScore_[:,1])
+			articlesScore.append((posTK10.avg(), negTK10.avg()))
+			updateSource ((posTK10.avg(), negTK10.avg()), source, cred)
+			relatedSnippets.extend(relatedSnippets_)
+			del relatedSnippets_
+			posStanceScores.extend(list(stanceScore_[:,0]))
+			negStanceScores.extend(list(stanceScore_[:,1]))  
+
+	review.addArticles(articlesScore, source)
+	for score in posTK10.nums:
+		posTKrelatedSnippets.append(relatedSnippets[posStanceScores.index(score)])
+	for score in negTK10.nums:
+		negTKrelatedSnippets.append(relatedSnippets[negStanceScores.index(score)])
+	review.addSnippets(posTKrelatedSnippets, negTKrelatedSnippets)
+	# print (posTKrelatedSnippets)
+	reviews.append(review)
+
+
+def buildReview(i):
+	filePath = filePaths[i]
+	if filePath == '.DS_Store':
+		return
+	print(filePath)
+	buildReviewHelper(filePath)
 
 
 def main():
-	#logFile = io.open(logPath, 'a')
-	'''
-	read articles and source 
-	'''
-
-	# idx to the orginal claim ids 
-	# only contain the ones with a related reporting article
-	# repeated for each snippets from the claim's reporting article
-	# claim 	article 	snippet
-	# 0			0			1
-	# 0			0			2
-	# 0			1			1
-	# 0			6			4
-	# 0			6			5
-	##############################
-	# claim 	article 
-	# 0			0
-	# 0			1
-	# 0			6
-	#claimSnippetIdx = []
-	articleSnippetIdx = []
-	relatedSnippets = []
-	claimArticleIdx = []
-	relatedArticles = []
-	relatedSources= []
-	creds = []
-	claimX = None
-	relatedSnippetsX = None
-
-	reader = ClaimReader(snopeDataPath, googleDataPath)
-	rsExtractor = RelatedSnippetsExtractor(overlapThreshold, glovePath=experimentPath+'glove')
-
-	curClaimIdx = 0
-	curArticleIdx = 0
-	everythingPath = os.path.join(experimentPath, 'everything')
-
-	if not os.path.isfile(everythingPath):
-		print ('reading data')
-		_numClaim = 0
-		_numArticle = 0
-		# each is a claim
-		#for filePath in os.listdir(googleDataPath):
-		fileList = os.listdir(googleDataPath)
-		fileListLen = len(fileList)
-		t1 = time.clock()
-		for i in range(fileListLen):
-			filePath = fileList[i]
-			_numClaim += 1
-			if not filePath.endswith('.json'):
-				continue
-			articles_, sources_ = reader.readGoogle(filePath)
-			claim, cred = reader.readSnopes(filePath)
-			for article, source in zip(articles_, sources_):
-				_numArticle += 1
-				t1 = time.clock()
-				claimX_, relatedSnippetsX_, relatedSnippets_, _ = rsExtractor.extract(claim, article)
-				t2 = time.clock()
-				print (t2-t1)
-
-				if relatedSnippets_ is not None:
-					#print (len(relatedSnippets_))
-					numRelatedSnippets_ = len(relatedSnippets_)
-					# extract grature要等到最后
-					# 要存一个relatedArticles
-					articleSnippetIdx.extend([curArticleIdx for i in range(numRelatedSnippets_)])
-					relatedSnippets.extend(relatedSnippets_)
-
-					claimArticleIdx.append(curClaimIdx)
-					relatedArticles.append(article)
-
-					relatedSources.append(source)
-					creds.append(cred)
-					if (claimX is None):
-						claimX = claimX_
-						relatedSnippetsX = relatedSnippetsX_
-					else:
-						np.vstack((claimX, claimX_))
-						np.vstack((relatedSnippetsX, relatedSnippetsX_))
-				curArticleIdx += 1
-			curClaimIdx += 1
-
-			if i!=0 and i%500 == 0:
-				print (i)
-				f = io.open(everythingPath+str(i), 'wb')
-				pickle.dump(articleSnippetIdx, f)
-				pickle.dump(relatedSnippets, f)
-				pickle.dump(claimArticleIdx, f)
-				pickle.dump(relatedArticles, f)
-				pickle.dump(relatedSources, f)
-				pickle.dump(creds, f)
-				pickle.dump(claimX, f)
-				pickle.dump(relatedSnippetsX, f)
-				del articleSnippetIdx
-				del relatedSnippets
-				del claimArticleIdx
-				del relatedArticles
-				del relatedSources
-				del creds
-				articleSnippetIdx = []
-				relatedSnippets = []
-				claimArticleIdx = []
-				relatedArticles = []
-				relatedSources= []
-				creds = []
-				f.close()
-
-		f = io.open(everythingPath, 'wb')
-		pickle.dump(articleSnippetIdx, f)
-		pickle.dump(relatedSnippets, f)
-		pickle.dump(claimArticleIdx, f)
-		pickle.dump(relatedArticles, f)
-		pickle.dump(relatedSources, f)
-		pickle.dump(creds, f)
-		pickle.dump(claimX, f)
-		pickle.dump(relatedSnippetsX, f)
-		print (_numClaim, _numArticle)
-		f.close()
+	global sourceMatrix
+	global reviews
+	print ('start claim evaluation ...')
+	if not os.path.isfile(reviewPath):
+		for i in range(int(sys.argv[9]), int(sys.argv[10])):
+			buildReview(i)
+		
+		'''
+		pool = Pool(processes=8)
+		pool.map(buildReview, [i for i in range(len(filePaths))])
+		pool.join()
+		'''
+		#print list(reviews)
+		print dict(sourceMatrix)
+		pickle.dump(list(reviews), io.open(reviewPath, 'wb'))
+		pickle.dump(dict(sourceMatrix), io.open(sourcePath, 'wb'))
 	else:
-		print ('loading data')
-		f = io.open(everythingPath, 'rb')
-		articleSnippetIdx = pickle.load(f)
-		relatedSnippets = pickle.load(f)
-		claimArticleIdx = pickle.load(f)
-		relatedArticles = pickle.load(f)
-		relatedSources= pickle.load(f)
-		creds = pickle.load(f)	
-	return
+		reviews = pickle.load(io.open(reviewPath, 'rb'))
+		sourceMatrix = pickle.load(io.open(sourcePath, 'rb'))
 
-	'''
-	relateRatio = len(claimSnippetIdx) / len(claims)
-	print (relateRatio)
-	logFile.write(relateRatio + '\n')
-	'''
-	print ('stance feature')
-	numSnippet = len(articleSnippetIdx)
-	assert(numSnippet == len(relatedSnippets))
-	numArticle = np.unique(np.array(articleSnippetIdx)).shape[0]
-	assert (numArticle == len(relatedArticles))
 
-	LGExtractor = lgExtractor(lgPath)
-	relatedSnippetX, _ = LGExtractor.extract(relatedSnippets, numFeatures=2000)
-	stanceClf = Classifier(relatedSnippetX, 'stance', logPath, experimentPath)
-	# use trained?
-	stanceProb = stanceClf.predict_porb()
 
-	numClass = stanceProb.shape[1]
-	stanceProbByArticle = np.zeros(numClass, numArticle)
-	_, idx, counts = np.unique(articleSnippetIdx, return_inverse=True, return_counts=True)
-	for i in range(numClass):
-		stanceProbByArticle[i,:] = np.bincount(idx, weights=stanceProb[:,i]) / counts
 
-	print ('lg feature')
-	lgX = LGExtractor.extract(relatedArticles)
-	assert(numArticle == lgX.shape[0])
-	'''
-	numFeature = lgX.shape[1]
-	lgXByClaim = np.zeros(numFeature, numClaim)
-	_, idx, counts = np.unique(claimArticleIdx, return_inverse=True, return_counts=True)
-	for i in range(numFeature):
-		lgXByClaim[i,:] = np.bincount(idx, weights=lgX[:,i]) / counts
-	'''
-	X = np.append(stanceProbByArticle.T, lgX, axis=1)
-	assert(X.shape[1] == numFeature + numClass)
-	y = np.array(creds)
-	assert(X.shape[0] == y.shape)
 
-	print ('classification')
-	credClf = Classifier(X, 'cred', logPath, experimentPath, y)
-
-	#sourceCred: [n_samples], or [numArticle]
-	credClf.paramSearch()
-
-	stanceByArticle = np.argmax(stanceProbByArticle, axis=0)
-	sourceCredByStance, _ = evaluateSourceCred(relatedSources, stanceByArticle, cred)
-
-	# (cv, numClaim, numClass)
-	# per article
-	credClf.crossValidate(sourceCredByStance)
-
-	# per claim
-	credClf.crossValidate(sourceCredByStance, claimArticleIdx)
-
-	logFile.close()
 
 if __name__ == '__main__':
-    main()
-
-
-
-
-
-
+	main()
 

@@ -41,12 +41,10 @@ def read(relatedSnippets, relatedSnippetLabels, claimX, relatedSnippetsX):
 		if not filePath.endswith('.json'):
 			continue
 		claim, article, cred = reader.readSnopes(filePath)
-		if (claim == 'the name of the san diego wild animal parks monorail was taken from crude acronym'):
-			print filePath
 		if claim is None:
 			continue
 		#t1 = time.clock()
-		claimX_, relatedSnippetsX_, relatedSnippets_, relatedSnippetLabels_ = rsExtractor.extract(claim, article, label=cred)
+		claimX_, relatedSnippetsX_, relatedSnippets_, relatedSnippetLabels_, _ = rsExtractor.extract(claim, article, label=cred)
 		#t2 = time.clock()
 		#print (t2-t1)
 		if relatedSnippets_ is not None:
@@ -54,17 +52,10 @@ def read(relatedSnippets, relatedSnippetLabels, claimX, relatedSnippetsX):
 				claimX = claimX_
 				relatedSnippetsX = relatedSnippetsX_
 			else:
-				np.vstack((claimX, claimX_))
-				try:
-					np.vstack((relatedSnippetsX, relatedSnippetsX_))
-				except ValueError:
-					print (relatedSnippetsX_.shape, relatedSnippetsX.shape)
-					print (filePath)
-					break
+				claimX = np.vstack((claimX, claimX_))
+				relatedSnippetsX = np.vstack((relatedSnippetsX, relatedSnippetsX_))
 			relatedSnippets.extend(relatedSnippets_)
 			relatedSnippetLabels.extend(relatedSnippetLabels_)
-		
-	print (relatedSnippetsX.shape)
 
 	with io.open(relatedSnippetsPath, 'w') as f:
 		for item in relatedSnippets:
@@ -72,7 +63,7 @@ def read(relatedSnippets, relatedSnippetLabels, claimX, relatedSnippetsX):
 	np.save(claimXPath, claimX)
 	np.save(relatedSnippetsXPath, relatedSnippetsX)
 	relatedSnippetLabels = np.array(relatedSnippetLabels)
-	np.save(relatedSnippetLabels, relatedSnippetLabelsPath)
+	np.save(relatedSnippetLabelsPath, relatedSnippetLabels)
 
 	print ('finish related snippets extraction')
 	ratioImbalance = np.sum(relatedSnippetLabels) / (relatedSnippetLabels.shape - np.sum(relatedSnippetLabels))
@@ -81,9 +72,9 @@ def read(relatedSnippets, relatedSnippetLabels, claimX, relatedSnippetsX):
 	print("MAX_DF = %f" %MAX_DF)
 
 	logFile = io.open(logPath, 'a')
-	logFile.write ('ratio of imbalance, neg : pos is  %4f \n' %ratioImbalance)
-	logFile.write("MIN_DF = %f \n" %MIN_DF)
-	logFile.write("MAX_DF = %f \n" %MAX_DF)
+	logFile.write (u'ratio of imbalance, neg : pos is  %4f \n' %ratioImbalance)
+	logFile.write(u"MIN_DF = %f \n" %MIN_DF)
+	logFile.write(u"MAX_DF = %f \n" %MAX_DF)
 	logFile.close()
 
 
@@ -110,6 +101,7 @@ def main():
 		claimX = np.load(claimXPath + '.npy')
 		relatedSnippetsX = np.load(relatedSnippetsXPath + '.npy')
 		relatedSnippetLabels = np.load(relatedSnippetLabelsPath + '.npy')
+		print (relatedSnippetsX.shape)
 
 	relatedSnippet_y = np.array(0)
 	featureNames = []
@@ -141,11 +133,11 @@ def main():
 		featureNames = np.load(featureNamePath+'.npy')
 	'''
 	print ('start classifying')
-	clf = Classifier(relatedSnippetsX, 'stance', logPath, experimentPath, y=relatedSnippetLabels)
+	clf = Classifier('stance', logPath, experimentPath, X=relatedSnippetsX, y=relatedSnippetLabels)
 	
 	# clf.evaluateFeatureImportance(featureNames, max_depth=30)
 	clf.paramSearch()
-	clf.crossValidate(max_depth=300, n_fold=10)
+	#clf.crossValidate(max_depth=300, n_fold=10)
 	# clf.crossValidate(max_depth=80)
 	'''
 	RESULTS

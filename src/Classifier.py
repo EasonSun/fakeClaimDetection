@@ -5,36 +5,41 @@ import io
 
 class Classifier(object):
 	"""docstring for Classifier"""
-	def __init__(self, X, task, logPath, experimentPath, y=None):
+	def __init__(self, task, logPath, experimentPath, X=None, y=None):
 		# X, y are numpy arrays to evaluate
 		self.X = X
 		self.y = y
 		self.logPath = logPath
 		self.experimentPath = experimentPath
-		self.task = task+'/'
+		self.task = task
 		self.rf = self._initRF()
 		self._printClass()
 
 	def _printClass(self):
+		if self.X is None:
+			print (self.rf.max_depth, self.rf.n_estimators) 
+			return
 		nunSample, numFeature = self.X.shape	
 		print("nunSample, numFeature: %i, %i" %(nunSample, numFeature))
 		logFile = io.open(self.logPath, 'a')
-		logFile.write("nunSample, numFeature: %i, %i\n" %(nunSample, numFeature))
+		logFile.write(u"nunSample, numFeature: %i, %i\n" %(nunSample, numFeature))
 		logFile.close()
 
 	def _initRF(self):
-		if os.path.isfile(self.experimentPath+self.task+'rf.pkl'):
+		modelPath = self.experimentPath+self.task+'/rf.pkl'
+		if os.path.isfile(modelPath):
+			print ('stance classifier loaded with max_depth and n_estimators:')
 			from sklearn.externals import joblib
-			return joblib.load(self.experimentPath+self.task+'rf.pkl')
+			return joblib.load(modelPath)
 		else:
 			if self.task == 'stance':
-				return RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2, n_estimators=2000, max_depth=80)
+				return RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2, n_estimators=1000, max_depth=80)
 			else:
 				return RandomForestClassifier(max_features='sqrt', class_weight='balanced', n_jobs=2)
 
 	def evaluateFeatureImportance(self, featureNames, n_fold=5, max_depth=None):
-		importancesPath = self.experimentPath+self.task+'importances'
-		topFeaturesPath = self.experimentPath+self.task+'topFeatures.txt'
+		importancesPath = self.experimentPath+self.task+'/importances'
+		topFeaturesPath = self.experimentPath+self.task+'/topFeatures.txt'
 		if max_depth is not None:
 			self.rf.max_depth = max_depth
 		importances = np.zeros(self.X.shape[1])
@@ -66,9 +71,9 @@ class Classifier(object):
 	def paramSearch(self, n_fold=5, sampleWeight=None):
 		logFile = io.open(self.logPath, 'a')
 		print ('Start searching best parameters ...')
-		logFile.write('Start searching best parameters ... \n')
+		logFile.write(u'Start searching best parameters ... \n')
 		from sklearn.model_selection import GridSearchCV
-		grid = dict(max_depth=[self.rf.max_depth*(1+i) for i in np.arange(0,5,.5)])
+		grid = dict(max_depth=[self.rf.max_depth*(1+i) for i in np.arange(0,1,.5)])
 		# grid = dict(n_estimators=[500], max_depth=[2000])
 		rfGS = GridSearchCV(estimator=self.rf, param_grid=grid, cv=n_fold, n_jobs=2)
 		if (sampleWeight is not None):
@@ -79,10 +84,10 @@ class Classifier(object):
 		stds = rfGS.cv_results_['std_test_score']
 		for mean, std, params in zip(means, stds, rfGS.cv_results_['params']):
 			print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
-			logFile.write("%0.3f (+/-%0.03f) for %r \n" % (mean, std * 2, params))
+			logFile.write(u"%0.3f (+/-%0.03f) for %r \n" % (mean, std * 2, params))
 		self.rf = rfGS.best_estimator_
 		from sklearn.externals import joblib
-		joblib.dump(rfGS.best_estimator_, self.experimentPath+self.task+'rf.pkl')
+		joblib.dump(rfGS.best_estimator_, self.experimentPath+self.task+'/rf.pkl')
 		logFile.close()
 		# sample_weight at fit is to deal with class imbalance
 
@@ -97,9 +102,9 @@ class Classifier(object):
 		logFile = io.open(self.logPath, 'a')
 
 		if (claimArticleIdx is None):
-			logFile.write('Per article evaluation\n')
+			logFile.write(u'Per article evaluation\n')
 		else:
-			logFile.write('Per claim evaluation\n')
+			logFile.write(u'Per claim evaluation\n')
 
 		if max_depth is not None:
 			self.rf.max_depth = max_depth
@@ -128,20 +133,22 @@ class Classifier(object):
 			result = classification_report(y_test, y_pred, target_names=['true', 'fake'])
 			accuracy = accuracy_score(y_test, y_pred)
 			print(accuracy)
-			logFile.write(str(accuracy)+'\n')
+			#logFile.write(str(accuracy)+'\n')
 			print(result)
-			logFile.write(result+'\n')
+			#logFile.write(result+'\n')
 		logFile.close()
 
 
 	# [n_samples, n_classes]
 	def predict_porb(self, X=None):
 		y_pred_prob = np.zeros(0)
-		if (X == None):
+		if (X is None):
 			# rf has been refitted to the entire dataset after CV
-			y_pred_prob = self.rf.predict_log_proba(self.X)
+			#y_pred_prob = self.rf.predict_log_proba(self.X)
+			y_pred_prob = self.rf.predict_proba(self.X)
 		else:
-			y_pred_prob = self.rf.predict_log_proba(X)
+			#y_pred_prob = self.rf.predict_log_proba(X)
+			y_pred_prob = self.rf.predict_proba(X)
 		# np.save(self.experimentPath+task+'/stance_prob', y_pred_prob)
 		
 		return y_pred_prob

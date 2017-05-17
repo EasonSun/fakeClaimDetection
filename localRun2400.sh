@@ -27,4 +27,4 @@ echo overlapThreshold >> experimentLogPath
 ### python src/evaluateStance.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold $snopeDataPath $doc2vecPath
 ### evaluate claim credibility
 overlapThreshold=".55"
-python src/evaluateClaim.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold $lgPath $snopeDataPath $googleDataPath $doc2vecPath 2 4
+python src/evaluateClaim.py $experimentPath $MIN_DF $MAX_DF $overlapThreshold $lgPath $snopeDataPath $googleDataPath $doc2vecPath 2001 2400

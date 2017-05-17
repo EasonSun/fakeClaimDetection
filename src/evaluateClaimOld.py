@@ -1,13 +1,11 @@
 import numpy as np
 import os
-import gc
 import re
 import sys
-import io
-sys.path.append('src/') # This line is added because otherwise it will show ModuleNotFound error
 import time
 import json
-import psutil
+import io
+
 import _pickle as pickle
 from Classifier import Classifier
 from relatedSnippetsExtractor import relatedSnippetsExtractor
@@ -24,20 +22,6 @@ overlapThreshold = float(sys.argv[4])
 lgPath = sys.argv[5]
 snopeDataPath = sys.argv[6]
 googleDataPath = sys.argv[7]
-
-def readSnopes(filePath):
-	filePath = os.path.join(snopeDataPath, filePath)
-	data = json.load(io.open(filePath, 'r', encoding='utf-8', errors='ignore'))
-	if data['Credibility'] in ['true', 'mostly true']:
-		return data['Claim'], 0# for
-	elif data['Credibility'] in ['false', 'mostly false']: 
-		return data['Claim'], 1
-
-
-def readGoogle(filePath):
-	filePath = os.path.join(googleDataPath, filePath)
-	data = json.load(io.open(filePath, 'r', encoding='utf-8', errors='ignore'))
-	return data['article'], data['source']
 
 
 '''
@@ -68,6 +52,85 @@ def evaluateSourceCred(sources, stanceByArticle, cred):
 	# print(sourceCred)
 	return sourceCred, sourceCred4Training
 
+
+reader = ClaimReader(snopeDataPath, googleDataPath)
+rsExtractor = RelatedSnippetsExtractor(overlapThreshold, glovePath=experimentPath+'glove')
+filePaths = os.listdir(googleDataPath)
+def read(i):
+	print ('reading data')
+ 	claimX = tonumpyarray(shared_claimX)
+    relatedSnippetsX = tonumpyarray(shared_relatedSnippetsX)
+
+	_numClaim = 0
+	_numArticle = 0
+	# each is a claim
+	#for filePath in os.listdir(googleDataPath):
+	filePath = filePaths[i]
+	_numClaim += 1
+	if not filePath.endswith('.json'):
+		return
+	articles_, sources_ = reader.readGoogle(filePath)
+	claim, cred = reader.readSnopes(filePath)
+
+	for article, source in zip(articles_, sources_):
+		_numArticle += 1
+		claimX_, relatedSnippetsX_, relatedSnippets_, _ = rsExtractor.extract(claim, article)
+
+		if relatedSnippets_ is not None:
+			#print (len(relatedSnippets_))
+			numRelatedSnippets_ = len(relatedSnippets_)
+			# extract grature要等到最后
+			# 要存一个relatedArticles
+			articleSnippetIdx.extend([curArticleIdx for i in range(numRelatedSnippets_)])
+			relatedSnippets.extend(relatedSnippets_)
+
+			claimArticleIdx.append(curClaimIdx)
+			relatedArticles.append(article)
+
+			relatedSources.append(source)
+			creds.append(cred)
+			claimX[j.value : j.value+3] = claimX_.reshape(claimX_.size)
+			relatedSnippetsX[k.value : k.value+relatedSnippetsX_.size] = relatedSnippetsX_.reshape(relatedSnippetsX_.size)
+			j.value += 3; k.value += relatedSnippetsX_.size
+		curArticleIdx += 1
+	curClaimIdx += 1
+
+	if i!=0 and i%500 == 0:
+		print (i)
+		f = io.open(everythingPath+str(i), 'wb')
+		pickle.dump(articleSnippetIdx, f)
+		pickle.dump(relatedSnippets, f)
+		pickle.dump(claimArticleIdx, f)
+		pickle.dump(relatedArticles, f)
+		pickle.dump(relatedSources, f)
+		pickle.dump(creds, f)
+		pickle.dump(claimX, f)
+		pickle.dump(relatedSnippetsX, f)
+		del articleSnippetIdx
+		del relatedSnippets
+		del claimArticleIdx
+		del relatedArticles
+		del relatedSources
+		del creds
+		articleSnippetIdx = []
+		relatedSnippets = []
+		claimArticleIdx = []
+		relatedArticles = []
+		relatedSources= []
+		creds = []
+		f.close()
+
+	f = io.open(everythingPath, 'wb')
+	pickle.dump(articleSnippetIdx, f)
+	pickle.dump(relatedSnippets, f)
+	pickle.dump(claimArticleIdx, f)
+	pickle.dump(relatedArticles, f)
+	pickle.dump(relatedSources, f)
+	pickle.dump(creds, f)
+	pickle.dump(claimX, f)
+	pickle.dump(relatedSnippetsX, f)
+	print (_numClaim, _numArticle)
+	f.close()
 def main():
 	#logFile = io.open(logPath, 'a')
 	'''
@@ -94,84 +157,19 @@ def main():
 	claimArticleIdx = []
 	relatedArticles = []
 	relatedSources= []
-	creds = []	
+	creds = []
 
-	RSExtractor = relatedSnippetsExtractor(overlapThreshold)
-	LGExtractor = lgExtractor(lgPath)
 
-	curClaimIdx = 0
-	curArticleIdx = 0
+
+
+	curClaimIdx = mp.Value('i', 0)
+	curArticleIdx = mp.Value('i', 0)
+	    shared_claimX = mp.Array(ctypes.c_double, 57)
+    shared_relatedSnippetsX = mp.Array(ctypes.c_double, 114)
 	everythingPath = os.path.join(experimentPath, 'everything')
-	numClaimsInGoogleResults = 3576 
-	groupSize = 149
-	print("groupSize: "+str(groupSize))
-	proc = psutil.Process(os.getpid())
 
 	if not os.path.isfile(everythingPath):
-		print ('reading data')
-		_numClaim = 0
-		_numArticle = 0
-		# each is a claim
-		for filePath in os.listdir(googleDataPath):
-			_numClaim += 1
-
-			if not filePath.endswith('.json'):
-				continue
-			print('Enter 1st loop')
-			articles_, sources_ = readGoogle(filePath)
-			claim, cred = readSnopes(filePath)
-			
-			print("Before 2nd loop:")
-			for article, source in zip(articles_, sources_):
-
-				_numArticle += 1
-				if (_numArticle == 19):
-					print ('darn')
-				relatedSnippets_, _ = RSExtractor.extract(claim, article)
-				if relatedSnippets_ is not None:
-					numRelatedSnippets_ = len(relatedSnippets_)
-					# extract grature要等到最后
-					# 要存一个relatedArticles
-					articleSnippetIdx.extend([curArticleIdx for i in range(numRelatedSnippets_)])
-					relatedSnippets.extend(relatedSnippets_)
-
-					claimArticleIdx.append(curClaimIdx)
-					relatedArticles.append(article)
-
-					relatedSources.append(source)
-					creds.append(cred)
-				curArticleIdx += 1
-				print("after 1 article:")
-			curClaimIdx += 1
-
-			
-			# 
-			if _numClaim % groupSize == 0:
-				
-				f = io.open(everythingPath+str(_numClaim), 'wb')
-				pickle.dump(articleSnippetIdx, f)
-				pickle.dump(relatedSnippets, f)
-				pickle.dump(claimArticleIdx, f)
-				pickle.dump(relatedArticles, f)
-				pickle.dump(relatedSources, f)
-				pickle.dump(creds, f)
-
-				del articleSnippetIdx
-				del relatedSnippets
-				del claimArticleIdx
-				del relatedArticles
-				del relatedSources
-				del creds
-				gc.collect()
-
-				articleSnippetIdx = []
-				relatedSnippets = []
-				claimArticleIdx = []
-				relatedArticles = []
-				relatedSources= []
-				creds = []
-				
-				print (_numClaim, _numArticle)
+		read
 	else:
 		print ('loading data')
 		f = io.open(everythingPath, 'rb')
@@ -181,7 +179,6 @@ def main():
 		relatedArticles = pickle.load(f)
 		relatedSources= pickle.load(f)
 		creds = pickle.load(f)	
-
 	return
 
 	'''
@@ -195,6 +192,7 @@ def main():
 	numArticle = np.unique(np.array(articleSnippetIdx)).shape[0]
 	assert (numArticle == len(relatedArticles))
 
+	LGExtractor = lgExtractor(lgPath)
 	relatedSnippetX, _ = LGExtractor.extract(relatedSnippets, numFeatures=2000)
 	stanceClf = Classifier(relatedSnippetX, 'stance', logPath, experimentPath)
 	# use trained?
