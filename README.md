@@ -20,6 +20,11 @@ data/\
 Thanks for jhlau's pretrained [doc2vec](https://github.com/jhlau/doc2vec)\
 
 ## Run
+Create a virtualenv with python2 and no system package, like
+`mkvirtualenv -p python_path --no-system-package`
+Then run
+`pip install -r requirements.txt`
+Then install the specific version of gensim from [here](https://github.com/jhlau/gensim)
 To run, you need to specify a experiment name, which will be created as a relateive path inside "results/"
 `./localRun.sh $experimentPath`
 For the current purpose, functionalities other than evaluateClaim is disabled.
