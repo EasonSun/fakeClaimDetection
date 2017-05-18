@@ -1,5 +1,5 @@
 *.npy
-*.txt
+observation.txt
 *.png
 *.ipynb
 *.png
