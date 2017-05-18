@@ -26,7 +26,7 @@ class Classifier(object):
 		logFile.close()
 
 	def _initRF(self):
-		modelPath = self.experimentPath+self.task+'/rf.pkl'
+		modelPath = 'data/stanceRF120.pkl'
 		if os.path.isfile(modelPath):
 			print ('stance classifier loaded with max_depth and n_estimators:')
 			from sklearn.externals import joblib

@@ -16,8 +16,8 @@ from ClaimReader import ClaimReader
 
 experimentPath = sys.argv[1]
 logPath = experimentPath + 'log.txt'
-sourcePath = experimentPath + 'sourceMatrix'
-reviewPath = experimentPath + 'reviews'
+sourcePath = experimentPath + 'sourceMatrix_' + sys.argv[9] + '_' + sys.argv[10]
+reviewPath = experimentPath + 'reviews_' + sys.argv[9] + '_' + sys.argv[10]
 
 MIN_DF = float(sys.argv[2])
 MAX_DF = float(sys.argv[3])
@@ -152,7 +152,7 @@ def buildReviewHelper(articles, sources, claim, cred=None):
 	for score in negTK10.nums:
 		negTKrelatedSnippets.append(relatedSnippets[negStanceScores.index(score)])
 	review.addSnippets(posTKrelatedSnippets, negTKrelatedSnippets)
-
+	'''
 	### CHEAT ###
 	posScore = sum([score[0] for score in articlesScore])
 	negScore = sum([score[1] for score in articlesScore])
@@ -165,7 +165,7 @@ def buildReviewHelper(articles, sources, claim, cred=None):
 	else:
 		print ('label: '+str(cred)+' predict: '+'1'+' confidence: '+str(score))
 		print (negTKrelatedSnippets) 
-
+	'''
 	reviews.append(review)
 
 
@@ -184,7 +184,7 @@ def main():
 	global reviews
 	print ('start claim evaluation ...')
 	if not os.path.isfile(reviewPath):
-		for i in range(len(filePaths)):
+		for i in range(int(sys.argv[9]), int(sys.argv[10])):
 			buildReview(i)
 		
 		'''

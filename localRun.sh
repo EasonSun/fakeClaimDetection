@@ -4,16 +4,17 @@ googleDataPath="data/Google_test"
 glovePath="data/glove/glove.6B.200d.txt"
 doc2vecPath='data/doc2vec_apnews.bin'
 lgPath="data/linguisticFeatures/allFeatures.txt"
-resultPath="results/"
 experimentPath="results/experiment_$1/"
 txt="txt"
-### experimentLogPath="$experimentLogPath.$txt"	###??? doesn't work?
-
+if [! -e "results/"]
+then
+	mkdir "results/"
+fi
 ###	intialize experiment
 if [ ! -e $experimentPath ]
 then
 	mkdir $experimentPath
-	mkdir "experimentPath/stance"
+	mkdir "$experimentPath/stance"
 fi
 
 overlapThreshold=".44"
